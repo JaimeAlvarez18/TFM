@@ -8,6 +8,11 @@ import cv2
 import torch
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from tqdm import tqdm
+import torch.amp as amp
+device='cuda' if torch.cuda.is_available() else 'cpu'
+
+import gc       
 
 
 class images_Dataset(Dataset):
@@ -184,6 +189,154 @@ class data_set():
         train,val,y_train,y_val = train_test_split(train,y_train,train_size=train_size,stratify=y_train,random_state=random_state)
 
         return train,val,test,y_train,y_val,y_test
+    def make_pairs(self,x, y):
+        """Creates a tuple containing image pairs with corresponding label.
+
+        Arguments:
+            x: List containing images, each index in this list corresponds to one image.
+            y: List containing labels, each label with datatype of `int`.
+
+        Returns:
+            Tuple containing two numpy arrays as (pairs_of_samples, labels),
+            where pairs_of_samples' shape is (2len(x), 2,n_features_dims) and
+            labels are a binary array of shape (2len(x)).
+        """
+
+        num_classes = max(y) + 1
+        digit_indices = [np.where(y == i)[0] for i in range(num_classes)] # 10 vectores con los índices de cada número
+
+        pairs = []
+        labels = []
+        
+        #For each sample in the set.
+        for idx1 in range(len(x)):
+
+            # add a matching example
+
+            #Get a sample
+            x1 = x[idx1]
+
+            #Label of the sample   
+            label1 = y[idx1]
+
+            #Get randomly a sample with the same label
+            idx2 = random.choice(digit_indices[label1])
+            x2 = x[idx2]
+
+            #Create the pair and the label
+            pairs += [[x1, x2]]  
+            labels += [0]
+
+            #Add a non-matching sample
+            label2 = random.randint(0, num_classes - 1)
+
+            #Get a label different to the initial one
+            while label2 == label1:
+                label2 = random.randint(0, num_classes - 1)
+
+            #Get a sample of the previous label calculated (different to the initial one)
+            idx2 = random.choice(digit_indices[label2])
+            x2 = x[idx2]
+
+            #Create the pair and the label
+            pairs += [[x1, x2]] 
+            labels += [1] 
+
+        return np.array(pairs), np.array(labels).astype("float32")
+    
+    
+    def make_pairs_embeddings(self,x,embs, y):
+        """Creates a tuple containing image pairs with corresponding label.
+
+        Arguments:
+            x: List containing images, each index in this list corresponds to one image.
+            y: List containing labels, each label with datatype of `int`.
+
+        Returns:
+            Tuple containing two numpy arrays as (pairs_of_samples, labels),
+            where pairs_of_samples' shape is (2len(x), 2,n_features_dims) and
+            labels are a binary array of shape (2len(x)).
+        """
+
+        num_classes = max(y) + 1
+
+        pairs1 = []
+        pairs2=[]
+        labels = []
+        
+        #For each sample in the set.
+        for idx1 in range(len(x)):
+
+            # add a matching example
+
+            #Get a sample
+            x1 = x[idx1]
+
+            #Label of the sample   
+            label1 = y[idx1]
+
+            #Get randomly a sample with the same label
+            x2 = embs[label1]
+
+            #Create the pair and the label
+            pairs1 += [x1]
+            pairs2 += [x2]    
+            labels += [0]
+
+            #Add a non-matching sample
+            label2 = random.randint(0, num_classes - 1)
+
+            #Get a label different to the initial one
+            while label2 == label1:
+                label2 = random.randint(0, num_classes - 1)
+
+            #Get a sample of the previous label calculated (different to the initial one)
+
+            x2 = embs[label2]
+
+            #Create the pair and the label
+            pairs1 += [x1]
+            pairs2 += [x2]  
+            labels += [1] 
+
+        return np.array(pairs1),np.array(pairs2), np.array(labels).astype("float32")
+    
+    
+class data_set_5():
+    def __init__(self,route):
+        self.route=route
+
+    def get_data(self,train_size=0.9,random_state=5):
+        train=[]
+        test=[]
+        y_train=[]
+        y_test=[]
+        vals=['stable_diffusion_v_1_4','stable_diffusion_v_1_5','BigGan']
+
+        itera=os.walk(self.route)
+        datasets=next(iter(itera))[1]
+        for index,dataset in enumerate(datasets):
+            direct=self.route+dataset+'/'
+            if dataset in vals:
+                test.append(glob(direct+'val/ai/*.PNG')+glob(direct+'val/ai/*.png'))
+                y_test.append([dataset]*len(test[len(test)-1]))
+            else:
+                
+                train.append(glob(direct+'train/ai/*.PNG')+glob(direct+'train/ai/*.png'))
+                y_train.append([dataset]*len(train[len(train)-1]))
+            
+
+        train = [item for sublist in train for item in sublist]
+        test = [item for sublist in test for item in sublist]
+        y_train = [item for sublist in y_train for item in sublist]
+        y_test = [item for sublist in y_test for item in sublist]
+
+        y_train=LabelEncoder().fit_transform(y_train)
+        y_test=LabelEncoder().fit_transform(y_test)
+
+        train,val,y_train,y_val = train_test_split(train,y_train,train_size=train_size,stratify=y_train,random_state=random_state)
+
+        return train,val,test,y_train,y_val,y_test
 
     def make_pairs(self,x, y):
         """Creates a tuple containing image pairs with corresponding label.
@@ -296,4 +449,40 @@ class data_set():
             labels += [1] 
 
         return np.array(pairs1),np.array(pairs2), np.array(labels).astype("float32")
+def create_and_save_embeddings(model,train_dataloader,path_to_save):
+    print("hola")
+    #Get embeddings representing each data generator
+    dictionary={
+        0:[],
+        1:[],
+        2:[],
+        3:[],
+        4:[],
+        5:[],
+        6:[],
+        7:[],   
+    }
+    index=0
+    model.eval()
+    for image1, label in tqdm(train_dataloader, desc=f"Getting embedding {index + 1}/{len(train_dataloader)}"):
+        index += 1
+        image1 = image1.to(device)
+        with amp.autocast(device_type='cuda'):
+            embs=model.encoder.predict_one_image(image1)
+        embs=embs.detach()
+        label=label.numpy()
+        for ind,emb in enumerate(embs):
+            dictionary[label[ind]].append(emb.cpu().numpy())
+
+        del embs,label
+        
+        gc.collect()
+        torch.cuda.empty_cache()
+    
+    last=[]
+    for key in dictionary:
+        embs=np.array(dictionary[key]).mean(axis=0)
+        last.append(embs)
+    last=np.array(last)
+    np.save(path_to_save, last)
 

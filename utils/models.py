@@ -2,19 +2,18 @@ from torch import nn
 import torch
 import gc
 import torch.nn.functional as F
-
 from efficientnet_pytorch import EfficientNet
 
 class siamese_model(nn.Module):
-    def __init__(self,type,device):
+    def __init__(self,type,device,embedding_size):
         super().__init__()
         self.device=device
         self.type=type
-        self.efficientNet = EfficientNet.from_name(type,3)  # Initialize from scratch
+        self.embedding_size=embedding_size
+        self.efficientNet = EfficientNet.from_pretrained(type,3)  # Initialize from scratch
         # Modify the classifier (output layer) of EfficientNet
 
-        self.efficientNet._fc = nn.Linear(1280,512)
-        self.norm=nn.BatchNorm1d(512)
+        self.efficientNet._fc = nn.Linear(1280,self.embedding_size)
 
     def forward(self,im1,im2):
 
@@ -25,21 +24,15 @@ class siamese_model(nn.Module):
         gc.collect()
         torch.cuda.empty_cache()
 
-        emb1=self.norm(emb1)
-
-        emb2=self.norm(emb2)
-
         return emb1,emb2
     
-    def predict_one_image(self,im1,embedding):
+    def predict_one_image(self,im1):
 
         emb1=self.efficientNet(im1)
-        embs=torch.concat([emb1,embedding],dim=0)
-        embs=self.norm(emb1)
         del im1
         gc.collect()
         torch.cuda.empty_cache()
-        return embs
+        return emb1
         
 
 class Big_model(nn.Module):
@@ -51,12 +44,14 @@ class Big_model(nn.Module):
 
         checkpoint=torch.load(self.path_to_encoder)
         self.encoder_type=checkpoint["model_type"]
-        self.encoder=siamese_model(self.encoder_type,self.device)
+        self.encoder=siamese_model(self.encoder_type,self.device,embedding_size=self.embedding_size)
         self.encoder.load_state_dict(checkpoint["model_state_dict"])
 
         self.classification=nn.Linear(self.embedding_size*2,self.embedding_size)
         self.act=nn.GELU()
         self.last=nn.Linear(self.embedding_size,2)
+        for param in self.encoder.parameters():
+            param.requires_grad = False
     def forward(self,im1,im2):
         emb1,im2=self.encoder(im1,im2)
         del im1
@@ -68,7 +63,7 @@ class Big_model(nn.Module):
         return (self.last(out))
     
     def classify_embeddings(self,emb1,emb2):
-        embs=torch.concat([emb1,emb2],dim=0)
+        embs=torch.concat([emb1,emb2],dim=1)
         out=self.classification(embs)
         out=self.act(out)
         out=self.last(out)
