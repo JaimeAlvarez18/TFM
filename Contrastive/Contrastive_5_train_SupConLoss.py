@@ -34,7 +34,7 @@ if __name__ == "__main__":
     print("Getting data ...")
     loader_data = data_set_5('Datasets/GenImage/')
     train,val,test,y_train,y_val,y_test = loader_data.get_data()
-    # print(len(train),len(val),len(test),len(y_train),len(y_test),len(y_val))
+    print(len(train),len(val),len(test),len(y_train),len(y_test),len(y_val))
 
     print("Creating Dataloaders ...")
     train_dataset=test_dataset(train,y_train,device,RESOLUTION)

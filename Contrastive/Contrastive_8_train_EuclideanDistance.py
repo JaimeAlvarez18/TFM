@@ -19,7 +19,7 @@ import sys
 
 if __name__ == "__main__":
     # Constants:
-    BATCH_SIZE=96
+    BATCH_SIZE=39
     RESOLUTION=256
     MARGIN=1
     EMBEDDING_SIZE=128

@@ -40,13 +40,13 @@ if __name__ == "__main__":
         route_encoder=sys.argv[1]
         route_classifier=sys.argv[2]
     
-    BATCH_SIZE=96
+    BATCH_SIZE=39
     RESOLUTION=256
     MARGIN=1
     EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"
     LOSS='EuclideanDistance1'
-    NUMBER=5
+    NUMBER=8
     path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{NUMBER}_{LOSS}' 
     PATH_TO_SAVE=f'Models/Classification_Models/Classification_embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{NUMBER}_{LOSS}.pth'  
 

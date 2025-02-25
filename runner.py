@@ -3,10 +3,10 @@ import os
 
 # List of modules and their parameters to run
 scripts = [
-    ("Contrastive.Contrastive_5_train_EuclideanDistance",[]),
-    ("Classification.Classification_embeddings", ["Models/Contrastive_Models/Contrastive_b0_128_96_5_EuclideanDistance1.pth"]),
-    ("tests.test_embeddings", ["Models/Contrastive_Models/Contrastive_b0_128_96_5_EuclideanDistance1.pth", 
-                               'Models/Classification_Models/Classification_embeddings_128_96_5_EuclideanDistance1.pth']),
+    ("Contrastive.Contrastive_8_train_EuclideanDistance",[]),
+    ("Classification.Classification_embeddings", ["Models/Contrastive_Models/Contrastive_b0_128_39_8_EuclideanDistance1.pth"]),
+    ("tests.test_embeddings", ["Models/Contrastive_Models/Contrastive_b0_128_39_8_EuclideanDistance1.pth", 
+                               'Models/Classification_Models/Classification_embeddings_128_39_8_EuclideanDistance1.pth']),
 ]
 
 # Function to run the scripts

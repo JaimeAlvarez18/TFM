@@ -1,3 +1,5 @@
+import os
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 import torch.multiprocessing as mp
 import torch
 from torch.utils.data import DataLoader
@@ -15,8 +17,8 @@ import sys
 
 if __name__ == "__main__":
     # Constants:
-    BATCH_SIZE=96
-    RESOLUTION=256
+    BATCH_SIZE=60
+    RESOLUTION=335
     MARGIN=1
     EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"

@@ -38,8 +38,8 @@ if __name__ == "__main__":
         route_encoder=sys.argv[1]
         route_classifier=sys.argv[2]
         
-    path_embeddings='Models/Embeddings/embeddings_128_96_5_EuclideanDistance1.npy'
-    BATCH_SIZE=96
+    path_embeddings='Models/Embeddings/embeddings_128_39_8_EuclideanDistance1.npy'
+    BATCH_SIZE=39
     RESOLUTION=256
     MARGIN=1
     EMBEDDING_SIZE=128

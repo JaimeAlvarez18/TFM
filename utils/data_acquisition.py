@@ -68,9 +68,9 @@ class images_Dataset(Dataset):
         
 
         #Data to tensor
-        image1=torch.from_numpy(image1).to(torch.float32)
-        image2=torch.from_numpy(image2).to(torch.float32)
-        y=torch.tensor(y).to(torch.float32)
+        image1=torch.from_numpy(image1).to(torch.float16)
+        image2=torch.from_numpy(image2).to(torch.float16)
+        y=torch.tensor(y).to(torch.float16)
 
         return image1,image2, y
     
