@@ -38,14 +38,13 @@ if __name__ == "__main__":
         route_encoder=sys.argv[1]
         route_classifier=sys.argv[2]
         
-    BATCH_SIZE=95
+    BATCH_SIZE=182
     RESOLUTION=256
     MARGIN=1
-    EMBEDDING_SIZE=256
+    EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"
     LOSS='EuclideanDistance1'
-    NUMBER=8
-    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{NUMBER}_{LOSS}' 
+    NUMBER=5
     PATH_TO_SAVE=f'Models/Classification_Models/Classification_pair_{EMBEDDING_SIZE}_{BATCH_SIZE}_{NUMBER}_{LOSS}.pth'    
 
 
@@ -216,7 +215,7 @@ if __name__ == "__main__":
         val_accuracy.append(val_accuracy_value)
         vcm = confusion_matrix(all_labels, all_preds)
         if val_accuracy_value >= best:
-            best=val_loss_value
+            best=val_accuracy_value
             checkpoint = {
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),

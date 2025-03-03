@@ -450,7 +450,6 @@ class data_set_5():
 
         return np.array(pairs1),np.array(pairs2), np.array(labels).astype("float32")
 def create_and_save_embeddings(model,train_dataloader,path_to_save):
-    print("hola")
     #Get embeddings representing each data generator
     dictionary={
         0:[],
@@ -485,4 +484,56 @@ def create_and_save_embeddings(model,train_dataloader,path_to_save):
         last.append(embs)
     last=np.array(last)
     np.save(path_to_save, last)
+def create_and_save_ALL_embeddings(model,train_dataloader):
+    #Get embeddings representing each data generator
+    labels=[]
+    embeddings=[]
+    index=0
+    model.eval()
+    for image1, label in tqdm(train_dataloader, desc=f"Getting embedding {index + 1}/{len(train_dataloader)}"):
+        index += 1
+        image1 = image1.to(device)
+        with amp.autocast(device_type='cuda'):
+            embs=model.predict_one_image(image1)
+        embs=embs.detach().cpu()
+        label=label.numpy()
+        embeddings+=embs
+        labels.extend(label)
 
+        del embs,label
+        
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    
+    return np.array(embeddings),np.array(labels)
+
+def get_N_embeddings(model,train_dataloader,N):
+    #Get embeddings representing each data generator
+    labels=[]
+    embeddings=[]
+    index=0
+    totals=[N for i in(range(8))]
+    model.eval()
+    for image1, label in tqdm(train_dataloader, desc=f"Getting embedding {index + 1}/{len(train_dataloader)}"):
+        if np.sum(np.array(totals))>0:
+            index += 1
+            image1 = image1.to(device)
+            with amp.autocast(device_type='cuda'):
+                embs=model.encoder.predict_one_image(image1)
+            embs=embs.detach().cpu()
+            label=label.numpy()
+            for i,number in enumerate(label):
+                if totals[int(number)] > 0:
+                    totals[int(number)]-=1
+                    labels.append(int(number))
+                    embeddings.append(embs[i])
+        else:
+            break
+
+        del embs,label
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    
+    return np.array(embeddings),np.array(labels)
