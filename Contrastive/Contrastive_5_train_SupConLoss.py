@@ -1,11 +1,11 @@
-import torch.multiprocessing as mp
+
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 device ='cuda' if torch.cuda.is_available() else 'cpu'
 import gc         
-mp.set_start_method('spawn', force=True)
 import torch.amp as amp
+import math
 
 from utils.data_acquisition import data_set_5,images_Dataset,test_dataset
 from utils.models import siamese_model
@@ -19,13 +19,12 @@ if __name__ == "__main__":
     # Constants:
     BATCH_SIZE=182
     RESOLUTION=256
-    MARGIN=1
+    MARGIN=5
     EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"
-    PATH_TO_SAVE=f'Models/Contrastive_Models/Contrastive_b0_{EMBEDDING_SIZE}_{BATCH_SIZE}_5_SupConLoss.pth'
+    PATH_TO_SAVE=f'Models/Contrastive_Models/Contrastive_b0_{EMBEDDING_SIZE}_{BATCH_SIZE}_5_ADM_BIGGAN_MIDJOURNEY_SupConLoss.pth'
     
-    import torch.multiprocessing as mp
-    mp.set_start_method("spawn", force=True)
+  
     retrain=False
     if len(sys.argv) > 1:
         retrain=True
@@ -66,7 +65,7 @@ if __name__ == "__main__":
     scaler = amp.GradScaler()
 
     print("Training model...")
-    EPOCHS=2
+    EPOCHS=5
     train_loss=[]
     train_accuracy=[]
     best=999999
@@ -141,22 +140,27 @@ if __name__ == "__main__":
                 image1 = image1.to(device)
                 label = label.to(device)
 
-                with amp.autocast(device_type=device,):  # Automatically choose precision (float16 for ops that benefit)
+                with amp.autocast(device_type=device):  # Automatically choose precision (float16 for ops that benefit)
                 # Forward pass
                     pred1 = model.predict_one_image(image1)
                     pred1=pred1.unsqueeze(1)
                     loss = criterion(pred1,label)
+                if math.isnan(loss.item()):
+                    print(pred1,label)
 
                 #Free memory
                 del image1
                 gc.collect()
                 torch.cuda.empty_cache()
+                scaler.scale(loss)
 
                 # Calculate loss
                 
 
                 # Track running loss and accuracy
                 running_loss += loss.item()
+                
+                    
 
                 val_total += label.size(0)
 
@@ -169,6 +173,7 @@ if __name__ == "__main__":
         val_loss_value = running_loss / len(val_dataloader)
         val_loss.append(val_loss_value)
         if val_loss_value<=best:
+            best=val_loss_value
             checkpoint = {
                     "model_state_dict": model.state_dict(),
                     "model_type": model.type,
@@ -176,7 +181,7 @@ if __name__ == "__main__":
                     "best_loss":best
                 }
             torch.save(checkpoint, PATH_TO_SAVE)
-        
+        print(len(val_dataloader),len(train_dataloader))
         print()
         print('-'*60)
         # Print results for the epoch

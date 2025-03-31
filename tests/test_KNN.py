@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
 
     
-    knn=KNeighborsClassifier(n_neighbors=1)
+    knn=KNeighborsClassifier(n_neighbors=11)
     knn.fit(embs1,classes)
     
     

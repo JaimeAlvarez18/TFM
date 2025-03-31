@@ -184,6 +184,7 @@ class data_set():
         label_encoder=LabelEncoder().fit(y_train)
         y_train=label_encoder.transform(y_train)
         y_test=label_encoder.transform(y_test)
+        print(label_encoder.classes_)
 
 
         train,val,y_train,y_val = train_test_split(train,y_train,train_size=train_size,stratify=y_train,random_state=random_state)
@@ -301,6 +302,51 @@ class data_set():
 
         return np.array(pairs1),np.array(pairs2), np.array(labels).astype("float32")
     
+class data_set_with_nature():
+    def __init__(self,route):
+        self.route=route
+        self.route_nature="Datasets/GenImageOther/BigGan"
+
+    def get_data(self,train_size=0.9,random_state=5):
+        train=[]
+        test=[]
+        y_train=[]
+        y_test=[]
+
+        itera=os.walk(self.route)
+        datasets=next(iter(itera))[1]
+        for index,dataset in enumerate(datasets):
+            direct=self.route+dataset+'/'
+            train.append(glob(direct+'train/ai/*.PNG')+glob(direct+'train/ai/*.png'))
+            test.append(glob(direct+'val/ai/*.PNG')+glob(direct+'val/ai/*.png'))
+            y_train.append([dataset]*len(train[index]))
+            y_test.append([dataset]*len(test[index]))
+        
+        nature1=glob(self.route_nature+"/val/nature/*.JPEG")
+
+        test.append(nature1)
+        y_test.append(["real"]*len(nature1))
+        
+        nature1=glob(self.route_nature+"/train/nature/*.JPEG")
+        train.append(nature1)
+        y_train.append(["real"]*len(nature1))
+            
+
+        train = [item for sublist in train for item in sublist]
+        test = [item for sublist in test for item in sublist]
+        y_train = [item for sublist in y_train for item in sublist]
+        y_test = [item for sublist in y_test for item in sublist]
+
+        label_encoder=LabelEncoder().fit(y_train)
+        y_train=label_encoder.transform(y_train)
+        y_test=label_encoder.transform(y_test)
+
+
+
+        train,val,y_train,y_val = train_test_split(train,y_train,train_size=train_size,stratify=y_train,random_state=random_state)
+
+        return train,val,test,y_train,y_val,y_test
+    
     
 class data_set_5():
     def __init__(self,route):
@@ -311,7 +357,8 @@ class data_set_5():
         test=[]
         y_train=[]
         y_test=[]
-        vals=['stable_diffusion_v_1_4','stable_diffusion_v_1_5','BigGan']
+        # vals=['stable_diffusion_v_1_4','stable_diffusion_v_1_5','BigGan']
+        vals=['ADM','GLIDE','Midjourney']
 
         itera=os.walk(self.route)
         datasets=next(iter(itera))[1]

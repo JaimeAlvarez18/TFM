@@ -158,7 +158,7 @@ if __name__ == "__main__":
                 torch.cuda.empty_cache()
 
                 # Calculate loss
-                
+                scaler.scale(loss)
 
                 # Track running loss and accuracy
                 running_loss += loss.item()
@@ -174,6 +174,7 @@ if __name__ == "__main__":
         val_loss_value = running_loss / len(val_dataloader)
         val_loss.append(val_loss_value)
         if val_loss_value<=best:
+            best=val_loss_value
             checkpoint = {
                     "model_state_dict": model.state_dict(),
                     "model_type": model.type,
