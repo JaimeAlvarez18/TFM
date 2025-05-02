@@ -11,8 +11,8 @@ device ='cuda' if torch.cuda.is_available() else 'cpu'
 import gc         
 mp.set_start_method('spawn', force=True)
 from pathos.multiprocessing import ProcessingPool as Pool
-from sklearn.metrics import confusion_matrix
-from utils.data_acquisition import data_set, images_Dataset,mix_dataset,create_and_save_embeddings,test_dataset
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
+from utils.data_acquisition import data_set_with_nature, images_Dataset,mix_dataset,create_and_save_embeddings,test_dataset, create_and_save_ALL_embeddings
 from utils.models import Big_model
 import numpy as np
 import torch.amp as amp
@@ -40,19 +40,20 @@ if __name__ == "__main__":
         route_encoder=sys.argv[1]
         route_classifier=sys.argv[2]
     
-    BATCH_SIZE=39
+    BATCH_SIZE=96
     RESOLUTION=256
     MARGIN=1
     EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"
     LOSS='EuclideanDistance1'
     NUMBER=8
-    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{NUMBER}_{LOSS}' 
-    PATH_TO_SAVE=f'Models/Classification_Models/Classification_embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{NUMBER}_{LOSS}.pth'  
+    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{NUMBER}_{LOSS}.npz' 
+    PATH_TO_SAVE=f'Models/Classification_Models/Classification_embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{NUMBER}_{LOSS}.pth' 
+    OUTPUT=f'Results/outputs_Classification_Embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{NUMBER}_{LOSS}.csv' 
 
 
     print("Getting data ...")
-    loader_data = data_set('Datasets/GenImage/')
+    loader_data = data_set_with_nature('Datasets/GenImage/')
     train,val,test,y_train,y_val,y_test = loader_data.get_data()
     
     train_dataset=test_dataset(train,y_train,device,RESOLUTION)
@@ -73,15 +74,23 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     
 
-    create_and_save_embeddings(model,train_dataloader,path_embeddings)
+    # embs1,classes =  create_and_save_ALL_embeddings(model.encoder,train_dataloader,path_embeddings)
     
-    embs=np.load(path_embeddings+'.npy')
+    # embs = np.array([embs1[classes == cls].mean(axis=0) for cls in np.unique(classes)])
+    
+    data = np.load(path_embeddings)
+    embs1 = data['embeddings']
+    classes = data['labels']
+    embs = np.array([embs1[classes == cls].mean(axis=0) for cls in np.unique(classes)])
+    
+    
 
     print('Preparing data ...')
     train1,train2,y_train=loader_data.make_pairs_embeddings(train,embs, y_train)
     val1,val2,y_val=loader_data.make_pairs_embeddings(val, embs,y_val)
     test1,test2,y_test=loader_data.make_pairs_embeddings(test,embs, y_test)
     
+    embs=torch.from_numpy(embs).to(device) 
 
 
     print("Creating dataloaders ...")
@@ -166,103 +175,110 @@ if __name__ == "__main__":
             del label, loss,pred
             gc.collect()
             torch.cuda.empty_cache()
+            checkpoint = {
+                    "model_state_dict": model.state_dict(),
+                    "encoder_path": model.path_to_encoder,
+                    "encoder_type" : model.encoder_type,
+                }
+            torch.save(checkpoint, PATH_TO_SAVE)
 
         # Calculate training loss and accuracy
 
-        train_loss_value = running_loss / len(train_dataloader)
-        train_accuracy_value = 100 * correct / total
-        train_loss.append(train_loss_value)
-        train_accuracy.append(train_accuracy_value)
-        tcm = confusion_matrix(all_labels, all_preds)
+        # train_loss_value = running_loss / len(train_dataloader)
+        # train_accuracy_value = 100 * correct / total
+        # train_loss.append(train_loss_value)
+        # train_accuracy.append(train_accuracy_value)         
+        # tcm = confusion_matrix(all_labels, all_preds)
+        
 
-        # Set model to evaluation mode
-        model.eval()
+        # # Set model to evaluation mode
+        # model.eval()
 
-        # Initialize validation stats
-        running_loss = 0.0
-        val_correct = 0
-        val_total = 0
-        all_labels = []  # List to store true labels
-        all_preds = []   # List to store predictions
+        # # Initialize validation stats
+        # running_loss = 0.0
+        # val_correct = 0
+        # val_total = 0
+        # all_labels = []  # List to store true labels
+        # all_preds = []   # List to store predictions
 
-        # Validation loop
-        with torch.no_grad():
-            for image1, embedding, label in tqdm(val_dataloader, desc=f"Validating Epoch {epoch + 1}/{EPOCHS}"):
+        # # Validation loop
+        # with torch.no_grad():
+        #     for image1, embedding, label in tqdm(test_dataloader, desc=f"Validating Epoch {epoch + 1}/{EPOCHS}"):
                 
-                #Data to GPU
-                image1 = image1.to(device)
-                embedding = embedding.to(device)
-                label = label.long().to(device)
+        #         #Data to GPU
+        #         image1 = image1.to(device)
+        #         embedding = embedding.to(device)
+        #         label = label.long().to(device)
 
-                with amp.autocast(device_type='cuda'):
-                    # Forward pass
-                    pred = model.encoder.predict_one_image(image1)
-                    pred=model.classify_embeddings(pred,embedding)
-                    # Calculate loss
-                    loss = criterion(pred,label)
+        #         with amp.autocast(device_type='cuda'):
+        #             # Forward pass
+        #             pred = model.encoder.predict_one_image(image1)
+        #             pred=model.classify_embeddings(pred,embedding)
+        #             # Calculate loss
+        #             loss = criterion(pred,label)
 
-                #Free memory
-                del image1,embedding
-                gc.collect()
-                torch.cuda.empty_cache()
+        #         #Free memory
+        #         del image1,embedding
+        #         gc.collect()
+        #         torch.cuda.empty_cache()
 
 
 
-                # Track running loss and accuracy
-                running_loss += loss.item()
-                val_total += label.size(0)
-                val_correct += (torch.argmax(pred,1) == label).sum().item()
-                all_labels.extend(label.cpu().numpy())  # Move to CPU for confusion matrix
-                all_preds.extend(torch.argmax(pred, 1).cpu().numpy())  # Predictions
+        #         # Track running loss and accuracy
+        #         running_loss += loss.item()
+        #         val_total += label.size(0)
+        #         val_correct += (torch.argmax(pred,1) == label).sum().item()
+        #         all_labels.extend(label.cpu().numpy())  # Move to CPU for confusion matrix
+        #         all_preds.extend(torch.argmax(pred, 1).cpu().numpy())  # Predictions
 
             
                 
 
-                #Free memory
-                del pred,label,loss
-                gc.collect()
-                torch.cuda.empty_cache()
+        #         #Free memory
+        #         del pred,label,loss
+        #         gc.collect()
+        #         torch.cuda.empty_cache()
 
 
-        # Calculate validation loss and accuracy
-        val_loss_value = running_loss / len(val_dataloader)
-        val_accuracy_value = 100 * val_correct / val_total
-        val_loss.append(val_loss_value)
-        val_accuracy.append(val_accuracy_value)
-        vcm = confusion_matrix(all_labels, all_preds)
-        if val_accuracy_value >= best:
-            best=val_loss_value
-            checkpoint = {
-                    "model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "encoder_path": model.path_to_encoder,
-                    "encoder_type" : model.encoder_type,
-                    "best_result":best
+        # # Calculate validation loss and accuracy
+        # val_loss_value = running_loss / len(val_dataloader)
+        # val_accuracy_value = 100 * val_correct / val_total
+        # val_loss.append(val_loss_value)
+        # val_accuracy.append(val_accuracy_value)
+        # vcm = confusion_matrix(all_labels, all_preds) 
+        # if val_accuracy_value >= best:
+        #     best=val_loss_value
+        #     checkpoint = {
+        #             "model_state_dict": model.state_dict(),
+        #             "optimizer_state_dict": optimizer.state_dict(),
+        #             "encoder_path": model.path_to_encoder,
+        #             "encoder_type" : model.encoder_type,
+        #             "best_result":best
 
-                }
-            torch.save(checkpoint, PATH_TO_SAVE)
+        #         }
+        #     torch.save(checkpoint, PATH_TO_SAVE)
 
 
         
 
-        print()
-        print('-'*60)
-        print('-'*60)
-        # Print results for the epoch
-        print(f"Epoch [{epoch + 1}/{EPOCHS}]")
-        print()
-        print('*'*60)
-        print("Train")
-        print(f"Loss: {train_loss_value:.4f}. Accuracy: {train_accuracy_value}.")
-        print(f"Training Confusion Matrix:")
-        print_confusion_matrix(tcm)
-        print()
-        print('*'*60)
-        print()
-        print("Validation")
-        print(f"Loss: {val_loss_value:.4f}. Accuracy: {val_accuracy_value}.")
-        print(f"Validation Confusion Matrix:")
-        print_confusion_matrix(vcm)
-        print('-'*60)
-        print('-'*60)
-        print()
+        # print()
+        # print('-'*60)
+        # print('-'*60)
+        # # Print results for the epoch
+        # print(f"Epoch [{epoch + 1}/{EPOCHS}]")
+        # print()
+        # print('*'*60)
+        # print("Train")
+        # print(f"Loss: {train_loss_value:.4f}. Accuracy: {train_accuracy_value}.")
+        # print(f"Training Confusion Matrix:")
+        # print_confusion_matrix(tcm)
+        # print()
+        # print('*'*60)
+        # print()
+        # print("Validation")
+        # print(f"Loss: {val_loss_value:.4f}. Accuracy: {val_accuracy_value}.")
+        # print(f"Validation Confusion Matrix:")
+        # print_confusion_matrix(vcm)
+        # print('-'*60)
+        # print('-'*60)
+        # print()

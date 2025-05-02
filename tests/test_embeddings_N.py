@@ -161,7 +161,7 @@ if __name__ == "__main__":
         gc.collect()
         torch.cuda.empty_cache()
         accuracy=(suma/total)*100
-        print(accuracy)
+        # print(accuracy)
 
 
     accuracy=(suma/total)*100

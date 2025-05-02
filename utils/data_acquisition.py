@@ -11,7 +11,7 @@ from sklearn.preprocessing import LabelEncoder
 from tqdm import tqdm
 import torch.amp as amp
 device='cuda' if torch.cuda.is_available() else 'cpu'
-
+import json
 import gc       
 
 
@@ -340,12 +340,68 @@ class data_set_with_nature():
         label_encoder=LabelEncoder().fit(y_train)
         y_train=label_encoder.transform(y_train)
         y_test=label_encoder.transform(y_test)
+        print(label_encoder.classes_)
 
 
 
         train,val,y_train,y_val = train_test_split(train,y_train,train_size=train_size,stratify=y_train,random_state=random_state)
 
         return train,val,test,y_train,y_val,y_test
+    def make_pairs_embeddings(self,x,embs, y):
+        """Creates a tuple containing image pairs with corresponding label.
+
+        Arguments:
+            x: List containing images, each index in this list corresponds to one image.
+            y: List containing labels, each label with datatype of `int`.
+
+        Returns:
+            Tuple containing two numpy arrays as (pairs_of_samples, labels),
+            where pairs_of_samples' shape is (2len(x), 2,n_features_dims) and
+            labels are a binary array of shape (2len(x)).
+        """
+
+        num_classes = max(y) + 1
+
+        pairs1 = []
+        pairs2=[]
+        labels = []
+        
+        #For each sample in the set.
+        for idx1 in range(len(x)):
+
+            # add a matching example
+
+            #Get a sample
+            x1 = x[idx1]
+
+            #Label of the sample   
+            label1 = y[idx1]
+
+            #Get randomly a sample with the same label
+            x2 = embs[label1]
+
+            #Create the pair and the label
+            pairs1 += [x1]
+            pairs2 += [x2]    
+            labels += [0]
+
+            #Add a non-matching sample
+            label2 = random.randint(0, num_classes - 1)
+
+            #Get a label different to the initial one
+            while label2 == label1:
+                label2 = random.randint(0, num_classes - 1)
+
+            #Get a sample of the previous label calculated (different to the initial one)
+
+            x2 = embs[label2]
+
+            #Create the pair and the label
+            pairs1 += [x1]
+            pairs2 += [x2]  
+            labels += [1] 
+
+        return np.array(pairs1),np.array(pairs2), np.array(labels).astype("float32")
     
     
 class data_set_5():
@@ -531,7 +587,7 @@ def create_and_save_embeddings(model,train_dataloader,path_to_save):
         last.append(embs)
     last=np.array(last)
     np.save(path_to_save, last)
-def create_and_save_ALL_embeddings(model,train_dataloader):
+def create_and_save_ALL_embeddings(model,train_dataloader,path):
     #Get embeddings representing each data generator
     labels=[]
     embeddings=[]
@@ -551,9 +607,12 @@ def create_and_save_ALL_embeddings(model,train_dataloader):
         
         gc.collect()
         torch.cuda.empty_cache()
+    labels=np.array(labels)
+    embeddings=np.array(embeddings)
+    np.savez(path, embeddings=embeddings, labels=labels)
 
     
-    return np.array(embeddings),np.array(labels)
+    return embeddings,labels
 
 def get_N_embeddings(model,train_dataloader,N):
     #Get embeddings representing each data generator

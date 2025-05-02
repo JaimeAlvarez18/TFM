@@ -72,7 +72,7 @@ if __name__ == "__main__":
     scaler = amp.GradScaler()
 
     print("Training model...")
-    EPOCHS=2
+    EPOCHS=1
     train_loss=[]
     train_accuracy=[]
     best=999999
@@ -173,15 +173,15 @@ if __name__ == "__main__":
         # Calculate validation loss and accuracy
         val_loss_value = running_loss / len(val_dataloader)
         val_loss.append(val_loss_value)
-        if val_loss_value<=best:
-            best=val_loss_value
-            checkpoint = {
-                    "model_state_dict": model.state_dict(),
-                    "model_type": model.type,
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "best_loss":best
-                }
-            torch.save(checkpoint, PATH_TO_SAVE)
+        # if val_loss_value<=best:
+        #     best=val_loss_value
+        checkpoint = {
+                "model_state_dict": model.state_dict(),
+                "model_type": model.type,
+                "optimizer_state_dict": optimizer.state_dict(),
+                "best_loss":best
+            }
+        torch.save(checkpoint, PATH_TO_SAVE)
         
         print()
         print('-'*60)

@@ -17,10 +17,10 @@ import sys
 
 if __name__ == "__main__":
     # Constants:
-    BATCH_SIZE=182
+    BATCH_SIZE=39
     RESOLUTION=256
     MARGIN=1
-    EMBEDDING_SIZE=256
+    EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"
     hora=time.time()
     PATH_TO_SAVE=f'Models/Contrastive_Models/Contrastive_b0_{EMBEDDING_SIZE}_{BATCH_SIZE}_8_SupConLoss.pth'   
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     scaler = amp.GradScaler()
 
     print("Training model...")
-    EPOCHS=100
+    EPOCHS=1
     train_loss=[]
     train_accuracy=[]
     best=999999
@@ -169,15 +169,15 @@ if __name__ == "__main__":
         # Calculate validation loss and accuracy
         val_loss_value = running_loss / len(val_dataloader)
         val_loss.append(val_loss_value)
-        if val_loss_value<=best:
-            best=val_loss_value
-            checkpoint = {
-                    "model_state_dict": model.state_dict(),
-                    "model_type": model.type,
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "best_loss":best
-                }
-            torch.save(checkpoint, PATH_TO_SAVE)
+        # if val_loss_value<=best:
+        #     best=val_loss_value
+        checkpoint = {
+                "model_state_dict": model.state_dict(),
+                "model_type": model.type,
+                "optimizer_state_dict": optimizer.state_dict(),
+                "best_loss":best
+            }
+        torch.save(checkpoint, PATH_TO_SAVE)
         
         print()
         print('-'*60)

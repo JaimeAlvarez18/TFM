@@ -17,8 +17,8 @@ import sys
 
 if __name__ == "__main__":
     # Constants:
-    BATCH_SIZE=60
-    RESOLUTION=335
+    BATCH_SIZE=182
+    RESOLUTION=256
     MARGIN=1
     EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"

@@ -1,17 +1,26 @@
 import subprocess
 import os
+import gc
+import torch
 
 # List of modules and their parameters to run
 scripts = [
+    # ("Classification.Classification_embeddings",["Models/Contrastive_Models/Contrastive_b0_128_96_8_EuclideanDistance1.pth"]),
+    # ("tests.embeddings_creator",["Models/Contrastive_Models/Contrastive_b0_128_96_5_EuclideanDistance1.pth"]),
     ("Contrastive.Contrastive_8_train_EuclideanDistance",[]),
-    ("Classification.Classification_embeddings", ["Models/Contrastive_Models/Contrastive_b0_128_39_8_EuclideanDistance1.pth"]),
-    ("tests.test_embeddings", ["Models/Contrastive_Models/Contrastive_b0_128_39_8_EuclideanDistance1.pth", 
-                               'Models/Classification_Models/Classification_embeddings_128_39_8_EuclideanDistance1.pth']),
+    ("Contrastive.Contrastive_8_train_SupConLoss",[])
+    
+    # ("tests.test_EuclideanDistance",["Models/Contrastive_Models/Contrastive_b0_128_96_8_EuclideanDistance1.pth","False"]),
+    # ("tests.test_KNN",["Models/Contrastive_Models/Contrastive_b0_128_182_5_SupConLoss.pth"])
+    
+    # ("tests.test_KNN",["Models/Contrastive_Models/Contrastive_b0_128_96_8_EuclideanDistance1.pth"])
 ]
 
 # Function to run the scripts
 def run_scripts():
     for module, params in scripts:
+        gc.collect()
+        torch.cuda.empty_cache() 
         try:
             # The command now uses '-m' to run the module
             command = ["python", "-m", module] + params

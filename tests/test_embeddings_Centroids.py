@@ -1,11 +1,11 @@
 
 import sys
-from utils.data_acquisition import data_set,images_Dataset,test_dataset
+from utils.data_acquisition import data_set,images_Dataset,test_dataset, create_and_save_embeddings,data_set_with_nature
 import torch
 from torch.utils.data import DataLoader
 device = "cuda" if torch.cuda.is_available() else "cpu"
 import gc
-
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
 
 from tqdm import tqdm
 from utils.models import Big_model,siamese_model
@@ -38,19 +38,25 @@ if __name__ == "__main__":
         route_encoder=sys.argv[1]
         route_classifier=sys.argv[2]
         
-    path_embeddings='Models/Embeddings/embeddings_128_39_8_EuclideanDistance1.npy'
-    BATCH_SIZE=39
+    
+    BATCH_SIZE=96
     RESOLUTION=256
     MARGIN=1
     EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"
+    LOSS="EuclideanDistance1"
+    CLASSES=8
+    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{CLASSES}_{LOSS}.npz'
+    OUTPUT=f'Results/outputs_Classification_Embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{CLASSES}_{LOSS}.csv'
         
     print("Getting data ...")
-    loader_data = data_set('Datasets/GenImage/')
+    loader_data = data_set_with_nature('Datasets/GenImage/')
     train,val,test,y_train,y_val,y_test = loader_data.get_data()
 
 
     print("Creating dataloaders")
+    train_data=test_dataset(train,y_train,device,RESOLUTION)
+    train_dataloader=DataLoader(train_data,batch_size=BATCH_SIZE,shuffle=True,num_workers=4)
     
     test_data=test_dataset(test,y_test,device,RESOLUTION)
     test_dataloader=DataLoader(test_data,batch_size=BATCH_SIZE,shuffle=True,num_workers=4)
@@ -59,8 +65,7 @@ if __name__ == "__main__":
     gc.collect()
     torch.cuda.empty_cache() 
     
-    embs=np.load(path_embeddings)
-    embs=torch.from_numpy(embs).to(device)
+
     
     print("Loading model to classify ...")
     checkpoint=torch.load(route_classifier)
@@ -69,6 +74,13 @@ if __name__ == "__main__":
     model.to(device)
     model.eval()
     
+    data = np.load(path_embeddings)
+    embs = data['embeddings']
+    labels = data['labels']
+    
+    
+    embs = np.array([embs[labels == cls].mean(axis=0) for cls in np.unique(labels)])
+    embs=torch.from_numpy(embs).to(device)        
     
     suma=0
     total=0
@@ -110,11 +122,44 @@ if __name__ == "__main__":
         gc.collect()
         torch.cuda.empty_cache()
         accuracy=(suma/total)*100
-        print(accuracy)
 
 
     accuracy=(suma/total)*100
+    
     cm = confusion_matrix(all_labels, all_preds)
+    np.savetxt(OUTPUT,cm,delimiter=",",fmt="%d")
+    
+    obj=[1,5,6,7]
+    obj1=[0,2,3,4,8]
+    precision1 =precision_score(all_labels,all_preds,labels=obj,average=None)
+    recall1 =recall_score(all_labels,all_preds,labels=obj,average=None)
+    f11=f1_score(all_labels,all_preds,labels=obj,average=None)
+    
+    precision2 =precision_score(all_labels,all_preds,labels=obj,average="weighted")
+    recall2 =recall_score(all_labels,all_preds,labels=obj,average="weighted")
+    f12=f1_score(all_labels,all_preds,labels=obj,average="weighted")
+    
+    precision3 =precision_score(all_labels,all_preds,labels=obj1,average="weighted")
+    recall3 =recall_score(all_labels,all_preds,labels=obj1,average="weighted")
+    f13=f1_score(all_labels,all_preds,labels=obj1,average="weighted")
+    
+    print("-"*100)
+    print("-"*100)
+    print(f"Precis zero-shot: BigGan{precision1[0]:.4f}; Real {precision1[1]:.4f}; SD 1.4 {precision1[2]:.4f}; SD 1.5 {precision1[3]:.4f}")
+    print(f"Recall zero-shot: BigGan{recall1[0]:.4f}; Real {recall1[1]:.4f}; SD 1.4 {recall1[2]:.4f}; SD 1.5 {recall1[3]:.4f}")
+    print(f"F1-sco zero-shot: BigGan{f11[0]:.4f}; Real {f11[1]:.4f}; SD 1.4 {f11[2]:.4f}; SD 1.5 {f11[3]:.4f}")
+    print("-"*100)
+    print(f"Total precis zero-shot: {precision2:.4f}")
+    print(f"Total recall zero-shot: {recall2:.4f}")
+    print(f"Total F1-sco zero-shot: {f12:.4f}")
+    print("-"*100)
+    print(f"Total precis NO zero-shot: {precision3:.4f}")
+    print(f"Total recall NO zero-shot: {recall3:.4f}")
+    print(f"Total F1-sco NO zero-shot: {f13:.4f}")
+    print("-"*100)
+    print("-"*100)
+    
+    print(cm)
     print()
     print('-'*60)
     print('-'*60)

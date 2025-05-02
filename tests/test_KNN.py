@@ -1,11 +1,12 @@
 import sys
-from utils.data_acquisition import data_set,images_Dataset,test_dataset
+from utils.data_acquisition import data_set,images_Dataset,test_dataset,data_set_with_nature
 import torch
 from torch.utils.data import DataLoader
 device = "cuda" if torch.cuda.is_available() else "cpu"
 import gc
 from utils.data_acquisition import create_and_save_ALL_embeddings
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score,auc
 
 
 from tqdm import tqdm
@@ -35,9 +36,15 @@ if __name__ == "__main__":
         
     BATCH_SIZE=182
     RESOLUTION=256
+    MARGIN=1
     EMBEDDING_SIZE=128
+    EFFICIENTNET_TYPE="efficientnet-b0"
+    CLASSES=8
+    LOSS="SupConLoss"
+    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{CLASSES}_{LOSS}.npz'
+    OUTPUT=f'Results/outputs_Classification_KNN_{EMBEDDING_SIZE}_{BATCH_SIZE}_{CLASSES}_{LOSS}.csv'
     
-    loader_data = data_set('Datasets/GenImage/')
+    loader_data = data_set_with_nature('Datasets/GenImage/')
     train,val,test,y_train,y_val,y_test = loader_data.get_data()
     
     print("Creating dataloaders")
@@ -51,12 +58,16 @@ if __name__ == "__main__":
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     model.eval()
-    embs1,classes =  create_and_save_ALL_embeddings(model,train_dataloader)
+    
+    data = np.load(path_embeddings)
+    embs = data['embeddings']
+    labels = data['labels']
+
 
 
     
     knn=KNeighborsClassifier(n_neighbors=11)
-    knn.fit(embs1,classes)
+    knn.fit(embs,labels)
     
     
     
@@ -87,11 +98,43 @@ if __name__ == "__main__":
             gc.collect()
             torch.cuda.empty_cache()
             accuracy=(suma/total)*100
-            print(accuracy)
 
 
     accuracy=(suma/total)*100
+    
     cm = confusion_matrix(all_labels, all_preds)
+    np.savetxt(OUTPUT,cm,delimiter=",",fmt="%d")
+    
+    obj=[1,5,6,7]
+    obj1=[0,2,3,4,8]
+    precision1 =precision_score(all_labels,all_preds,labels=obj,average=None)
+    recall1 =recall_score(all_labels,all_preds,labels=obj,average=None)
+    f11=f1_score(all_labels,all_preds,labels=obj,average=None)
+    
+    precision2 =precision_score(all_labels,all_preds,labels=obj,average="weighted")
+    recall2 =recall_score(all_labels,all_preds,labels=obj,average="weighted")
+    f12=f1_score(all_labels,all_preds,labels=obj,average="weighted")
+    
+    precision3 =precision_score(all_labels,all_preds,labels=obj1,average="weighted")
+    recall3 =recall_score(all_labels,all_preds,labels=obj1,average="weighted")
+    f13=f1_score(all_labels,all_preds,labels=obj1,average="weighted")
+    
+    print("-"*100)
+    print("-"*100)
+    print(f"Precis zero-shot: BigGan{precision1[0]:.4f}; Real {precision1[1]:.4f}; SD 1.4 {precision1[2]:.4f}; SD 1.5 {precision1[3]:.4f}")
+    print(f"Recall zero-shot: BigGan{recall1[0]:.4f}; Real {recall1[1]:.4f}; SD 1.4 {recall1[2]:.4f}; SD 1.5 {recall1[3]:.4f}")
+    print(f"F1-sco zero-shot: BigGan{f11[0]:.4f}; Real {f11[1]:.4f}; SD 1.4 {f11[2]:.4f}; SD 1.5 {f11[3]:.4f}")
+    print("-"*100)
+    print(f"Total precis zero-shot: {precision2:.4f}")
+    print(f"Total recall zero-shot: {recall2:.4f}")
+    print(f"Total F1-sco zero-shot: {f12:.4f}")
+    print("-"*100)
+    print(f"Total precis NO zero-shot: {precision3:.4f}")
+    print(f"Total recall NO zero-shot: {recall3:.4f}")
+    print(f"Total F1-sco NO zero-shot: {f13:.4f}")
+    print("-"*100)
+    print("-"*100)  
+    
     print()
     print('-'*60)
     print('-'*60)
