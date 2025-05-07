@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
 
     print("Training model...")
-    EPOCHS=2
+    EPOCHS=1
     train_loss=[]
     train_accuracy=[]
     best=0.0
@@ -178,6 +178,7 @@ if __name__ == "__main__":
             checkpoint = {
                     "model_state_dict": model.state_dict(),
                     "encoder_path": model.path_to_encoder,
+                    "optimizer_state_dict":optimizer.state_dict(),
                     "encoder_type" : model.encoder_type,
                 }
             torch.save(checkpoint, PATH_TO_SAVE)

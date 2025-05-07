@@ -403,10 +403,13 @@ class data_set_with_nature():
 
         return np.array(pairs1),np.array(pairs2), np.array(labels).astype("float32")
     
+
     
-class data_set_5():
+    
+class data_set_N_with_nature():
     def __init__(self,route):
         self.route=route
+        self.route_nature="Datasets/GenImageOther/BigGan"
 
     def get_data(self,train_size=0.9,random_state=5):
         train=[]
@@ -414,7 +417,7 @@ class data_set_5():
         y_train=[]
         y_test=[]
         # vals=['stable_diffusion_v_1_4','stable_diffusion_v_1_5','BigGan']
-        vals=['ADM','GLIDE','Midjourney']
+        vals=['Midjourney',"VQDM","BigGan"]#entrenar solo con modelos de difussion (midjourney no se sabe que es)
 
         itera=os.walk(self.route)
         datasets=next(iter(itera))[1]
@@ -427,6 +430,14 @@ class data_set_5():
                 
                 train.append(glob(direct+'train/ai/*.PNG')+glob(direct+'train/ai/*.png'))
                 y_train.append([dataset]*len(train[len(train)-1]))
+        # nature1=glob(self.route_nature+"/val/nature/*.JPEG")
+
+        # test.append(nature1)
+        # y_test.append(["real"]*len(nature1))
+        
+        # nature1=glob(self.route_nature+"/train/nature/*.JPEG")
+        # train.append(nature1)
+        # y_train.append(["real"]*len(nature1))
             
 
         train = [item for sublist in train for item in sublist]
@@ -434,12 +445,353 @@ class data_set_5():
         y_train = [item for sublist in y_train for item in sublist]
         y_test = [item for sublist in y_test for item in sublist]
 
-        y_train=LabelEncoder().fit_transform(y_train)
-        y_test=LabelEncoder().fit_transform(y_test)
+        encoder=LabelEncoder().fit(y_train)
+        y_train=encoder.transform(y_train)
+        # y_test=encoder.transform(y_test)
+        
+        print(encoder.classes_)
 
         train,val,y_train,y_val = train_test_split(train,y_train,train_size=train_size,stratify=y_train,random_state=random_state)
 
         return train,val,test,y_train,y_val,y_test
+
+    def make_pairs(self,x, y):
+        """Creates a tuple containing image pairs with corresponding label.
+
+        Arguments:
+            x: List containing images, each index in this list corresponds to one image.
+            y: List containing labels, each label with datatype of `int`.
+
+        Returns:
+            Tuple containing two numpy arrays as (pairs_of_samples, labels),
+            where pairs_of_samples' shape is (2len(x), 2,n_features_dims) and
+            labels are a binary array of shape (2len(x)).
+        """
+
+        num_classes = max(y) + 1
+        digit_indices = [np.where(y == i)[0] for i in range(num_classes)] # 10 vectores con los índices de cada número
+
+        pairs = []
+        labels = []
+        
+        #For each sample in the set.
+        for idx1 in range(len(x)):
+
+            # add a matching example
+
+            #Get a sample
+            x1 = x[idx1]
+
+            #Label of the sample   
+            label1 = y[idx1]
+
+            #Get randomly a sample with the same label
+            idx2 = random.choice(digit_indices[label1])
+            x2 = x[idx2]
+
+            #Create the pair and the label
+            pairs += [[x1, x2]]  
+            labels += [0]
+
+            #Add a non-matching sample
+            label2 = random.randint(0, num_classes - 1)
+
+            #Get a label different to the initial one
+            while label2 == label1:
+                label2 = random.randint(0, num_classes - 1)
+
+            #Get a sample of the previous label calculated (different to the initial one)
+            idx2 = random.choice(digit_indices[label2])
+            x2 = x[idx2]
+
+            #Create the pair and the label
+            pairs += [[x1, x2]] 
+            labels += [1] 
+
+        return np.array(pairs), np.array(labels).astype("float32")
+    
+    
+    def make_pairs_embeddings(self,x,embs, y):
+        """Creates a tuple containing image pairs with corresponding label.
+
+        Arguments:
+            x: List containing images, each index in this list corresponds to one image.
+            y: List containing labels, each label with datatype of `int`.
+
+        Returns:
+            Tuple containing two numpy arrays as (pairs_of_samples, labels),
+            where pairs_of_samples' shape is (2len(x), 2,n_features_dims) and
+            labels are a binary array of shape (2len(x)).
+        """
+
+        num_classes = max(y) + 1
+
+        pairs1 = []
+        pairs2=[]
+        labels = []
+        
+        #For each sample in the set.
+        for idx1 in range(len(x)):
+
+            # add a matching example
+
+            #Get a sample
+            x1 = x[idx1]
+
+            #Label of the sample   
+            label1 = y[idx1]
+
+            #Get randomly a sample with the same label
+            x2 = embs[label1]
+
+            #Create the pair and the label
+            pairs1 += [x1]
+            pairs2 += [x2]    
+            labels += [0]
+
+            #Add a non-matching sample
+            label2 = random.randint(0, num_classes - 1)
+
+            #Get a label different to the initial one
+            while label2 == label1:
+                label2 = random.randint(0, num_classes - 1)
+
+            #Get a sample of the previous label calculated (different to the initial one)
+
+            x2 = embs[label2]
+
+            #Create the pair and the label
+            pairs1 += [x1]
+            pairs2 += [x2]  
+            labels += [1] 
+
+        return np.array(pairs1),np.array(pairs2), np.array(labels).astype("float32")
+class data_set_binary_with_nature():
+    def __init__(self,route):
+        self.route=route
+        self.route_nature="Datasets/GenImageOther/BigGan"
+
+    def get_data(self,train_size=0.9,random_state=5):
+        all_train=[]
+        all_test=[]
+        all_y_train=[]
+        all_y_test=[]
+
+        itera=os.walk(self.route)
+        datasets=next(iter(itera))[1]
+        print(datasets)
+        for index,dataset in enumerate(datasets): 
+            # 0 Real 1 sintetica
+            test=[]
+            train=[]
+            y_train=[]
+            y_test=[]
+            direct=self.route+dataset+'/'
+
+            test.append(glob(direct+'val/ai/*.PNG')+glob(direct+'val/ai/*.png'))
+            y_test.append([1]*len(test[len(test)-1]))
+            lista=glob(direct+'val/nature/*.JPEG')
+            # print(len(lista))
+            test.append(lista)
+            y_test.append([0]*len(lista))
+
+            
+            train.append(glob(direct+'train/ai/*.PNG')+glob(direct+'train/ai/*.png'))
+            y_train.append([1]*len(train[len(train)-1]))
+            
+                    
+            nature1=glob(self.route_nature+"/train/nature/*.JPEG")
+            train.append(nature1)
+            y_train.append([0]*len(nature1))
+        
+        
+            all_train.append(train)
+            all_test.append(test)
+            all_y_train.append(y_train)
+            all_y_test.append(y_test)
+            
+
+
+
+        return all_train,all_test,all_y_train,all_y_test
+
+    def make_pairs(self,x, y):
+        """Creates a tuple containing image pairs with corresponding label.
+
+        Arguments:
+            x: List containing images, each index in this list corresponds to one image.
+            y: List containing labels, each label with datatype of `int`.
+
+        Returns:
+            Tuple containing two numpy arrays as (pairs_of_samples, labels),
+            where pairs_of_samples' shape is (2len(x), 2,n_features_dims) and
+            labels are a binary array of shape (2len(x)).
+        """
+
+        num_classes = max(y) + 1
+        digit_indices = [np.where(y == i)[0] for i in range(num_classes)] # 10 vectores con los índices de cada número
+
+        pairs = []
+        labels = []
+        
+        #For each sample in the set.
+        for idx1 in range(len(x)):
+
+            # add a matching example
+
+            #Get a sample
+            x1 = x[idx1]
+
+            #Label of the sample   
+            label1 = y[idx1]
+
+            #Get randomly a sample with the same label
+            idx2 = random.choice(digit_indices[label1])
+            x2 = x[idx2]
+
+            #Create the pair and the label
+            pairs += [[x1, x2]]  
+            labels += [0]
+
+            #Add a non-matching sample
+            label2 = random.randint(0, num_classes - 1)
+
+            #Get a label different to the initial one
+            while label2 == label1:
+                label2 = random.randint(0, num_classes - 1)
+
+            #Get a sample of the previous label calculated (different to the initial one)
+            idx2 = random.choice(digit_indices[label2])
+            x2 = x[idx2]
+
+            #Create the pair and the label
+            pairs += [[x1, x2]] 
+            labels += [1] 
+
+        return np.array(pairs), np.array(labels).astype("float32")
+    
+    
+    def make_pairs_embeddings(self,x,embs, y):
+        """Creates a tuple containing image pairs with corresponding label.
+
+        Arguments:
+            x: List containing images, each index in this list corresponds to one image.
+            y: List containing labels, each label with datatype of `int`.
+
+        Returns:
+            Tuple containing two numpy arrays as (pairs_of_samples, labels),
+            where pairs_of_samples' shape is (2len(x), 2,n_features_dims) and
+            labels are a binary array of shape (2len(x)).
+        """
+
+        num_classes = max(y) + 1
+
+        pairs1 = []
+        pairs2=[]
+        labels = []
+        
+        #For each sample in the set.
+        for idx1 in range(len(x)):
+
+            # add a matching example
+
+            #Get a sample
+            x1 = x[idx1]
+
+            #Label of the sample   
+            label1 = y[idx1]
+
+            #Get randomly a sample with the same label
+            x2 = embs[label1]
+
+            #Create the pair and the label
+            pairs1 += [x1]
+            pairs2 += [x2]    
+            labels += [0]
+
+            #Add a non-matching sample
+            label2 = random.randint(0, num_classes - 1)
+
+            #Get a label different to the initial one
+            while label2 == label1:
+                label2 = random.randint(0, num_classes - 1)
+
+            #Get a sample of the previous label calculated (different to the initial one)
+
+            x2 = embs[label2]
+
+            #Create the pair and the label
+            pairs1 += [x1]
+            pairs2 += [x2]  
+            labels += [1] 
+
+        return np.array(pairs1),np.array(pairs2), np.array(labels).astype("float32")
+class data_set_binary_synth():
+    def __init__(self,route="/home/jaime/Desktop/TFM/TFM/Datasets/Synth/"):
+        self.route=route
+        
+        
+    def get_data_test(self):
+        all_test=[]
+
+        all_y_test=[]
+
+        itera=os.walk(self.route+"CNN_synth_testset/")
+        datasets=next(iter(itera))[1]
+
+        for index,dataset in enumerate(datasets): 
+            # 0 Real 1 sintetica
+            test=[]
+            y_test=[]
+            direct=self.route+dataset+'/'
+
+            test.append(glob(direct+'1_fake/*.PNG')+glob(direct+'1_fake/*.png'))
+            y_test.append([1]*len(test[len(test)-1]))
+            lista=glob(direct+'0_real*.png')+glob(direct+'0_real/*.PNG')
+            # print(len(lista))
+            test.append(lista)
+            y_test.append([0]*len(lista))
+
+            
+        
+        
+
+            all_test.append(test)
+            all_y_test.append(y_test)
+        return all_test,all_y_test
+
+    def get_data(self,train_size=0.9,random_state=5):
+
+        ruta=self.route+"Train_ProGan/"
+        itera=os.walk(self.route+"Train_ProGan/")
+        datasets=next(iter(itera))[1]
+        print(datasets)
+        test=[]
+        train=[]
+        y_train=[]
+        y_test=[]
+        for index,dataset in enumerate(datasets): 
+            # 0 Real 1 sintetica
+
+            direct=ruta+dataset+'/'
+            # print(direct)
+
+            lista=glob(direct+'1_fake/*.PNG')+glob(direct+'1_fake/*.png')
+            # print(lista)
+            train.append(lista)
+            y_train.append([1]*len(lista))
+
+            lista=glob(direct+'0_real/*.PNG')+glob(direct+'0_real/*.png')
+            train.append(lista)
+            y_train.append([0]*len(lista))
+            
+        train = [item for sublist in train for item in sublist]
+        test = [item for sublist in test for item in sublist]
+        y_train = [item for sublist in y_train for item in sublist]
+        y_test = [item for sublist in y_test for item in sublist]
+
+
+        return train,y_train
 
     def make_pairs(self,x, y):
         """Creates a tuple containing image pairs with corresponding label.

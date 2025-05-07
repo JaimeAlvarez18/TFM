@@ -1,0 +1,24 @@
+AI vs REAL
+    - Entrenamiento con 8 generadores sin reales -> Test todo (KNN solo con el entrenamiento del modelo contrastivo)
+    - Entrenamiento con 8 generadores con reales -> Test todo (KNN solo con el entrenamiento del modelo contrastivo)
+    - Entrenamiento con 1 generador sin reales -> Test todo (KNN solo con el entrenamiento del modelo contrastivo)
+
+SOURCE ATTRIBUTION
+    - 5 modelos cada uno con 5 generadores sin reales -> Test todo (KNN solo con el entrenamiento del modelo contrastivo) (5)
+    - Entrenamiento con 8 generadores sin reales -> Test todo (KNN solo con el entrenamiento del modelo contrastivo)
+    - Entrenamiento con 8 generadores con reales -> Test todo (KNN solo con el entrenamiento del modelo contrastivo)
+
+ABLATIONS:
+    - Batch
+    - Loss
+    - ML method
+    - Margin in euclidean distance
+    - Embedding size
+    - Image resolution
+
+LaTeX
+    - Incluir Synth in SotA
+    - Incluir Synth en Datasets
+    - Renombrar Ablations
+    - En anexos matrices de confusion
+    - Rehacer experimentacion

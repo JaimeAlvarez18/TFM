@@ -7,8 +7,8 @@ import torch
 scripts = [
     # ("Classification.Classification_embeddings",["Models/Contrastive_Models/Contrastive_b0_128_96_8_EuclideanDistance1.pth"]),
     # ("tests.embeddings_creator",["Models/Contrastive_Models/Contrastive_b0_128_96_5_EuclideanDistance1.pth"]),
-    ("Contrastive.Contrastive_8_train_EuclideanDistance",[]),
-    ("Contrastive.Contrastive_8_train_SupConLoss",[])
+    # ("Contrastive.Contrastive_8_train_SupConLoss",[]),
+    ("tests.embeddings_creator",["Models/Contrastive_Models/Contrastive_b0_128_182_SYNTH_SupConLoss.pth"])
     
     # ("tests.test_EuclideanDistance",["Models/Contrastive_Models/Contrastive_b0_128_96_8_EuclideanDistance1.pth","False"]),
     # ("tests.test_KNN",["Models/Contrastive_Models/Contrastive_b0_128_182_5_SupConLoss.pth"])

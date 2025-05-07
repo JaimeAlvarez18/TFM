@@ -112,6 +112,7 @@ if __name__ == "__main__":
         
         # Free memory
         del image1, label, batched_predictions, euclidean_distance,embeddings
+        del image1, label, batched_predictions, euclidean_distance,embeddings
         gc.collect()
         torch.cuda.empty_cache()
         accuracy=(suma/total)*100

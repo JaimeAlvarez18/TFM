@@ -1,5 +1,5 @@
 import sys
-from utils.data_acquisition import data_set,images_Dataset,test_dataset,data_set_with_nature,data_set_binary_with_nature
+from utils.data_acquisition import data_set,images_Dataset,test_dataset,data_set_with_nature,data_set_binary_with_nature,data_set_binary_synth
 import torch
 from torch.utils.data import DataLoader
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -44,11 +44,13 @@ if __name__ == "__main__":
     EFFICIENTNET_TYPE="efficientnet-b0"
     CLASSES=2
     LOSS="SupConLoss"
-    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{CLASSES}_{LOSS}.npz'
+    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_SYNTH_{LOSS}_TODOS.npz'
     OUTPUT=f'Results/outputs_Binary_Classification_KNN_{EMBEDDING_SIZE}_{BATCH_SIZE}_{CLASSES}_{LOSS}.csv'
     
     loader_data = data_set_binary_with_nature('Datasets/GenImage/')
-    train,test,y_train,y_test = loader_data.get_data()
+    testing_data=data_set_binary_synth()
+    # test,y_test = testing_data.get_data_test()
+    all_train,all_test,all_y_train,all_y_test=loader_data.get_data()
     
     checkpoint=torch.load(route_encoder,weights_only=False)
     model= siamese_model(checkpoint["model_type"],device,EMBEDDING_SIZE)
@@ -59,10 +61,9 @@ if __name__ == "__main__":
     data = np.load(path_embeddings)
     embs = data['embeddings']
     labels = data['labels']
-    mask=(labels==1) | (labels==5)
     # mask = (all_labels == i) | (all_labels == 5)
-    embs=embs[mask]
-    labels=labels[mask]
+    embs=embs
+    labels=labels
 
 
 
@@ -77,35 +78,24 @@ if __name__ == "__main__":
     total=0
     index = 0
     #Convert indexes of generators in dataset with nature to generators with no nature
-    dictionary={
-        0:1,
-        1:7,
-        2:4,
-        3:2,
-        4:3,
-        5:6,
-        6:0,
-        7:8
-    }
 
     
-    for i in range(len(test)):
+    for i in range(len(all_test)):
         # transformation=dictionary.get(i)
         all_roc=[]
         all_acc=[]
-        temp_train=train[i]
-        temp_test=test[i]
-        temp_y_test=y_test[i]
-        temp_y_train=y_train[i]
+        temp_train=all_train[i]
+        temp_test=all_test[i]
+        temp_y_test=all_y_test[i]
+        temp_y_train=all_y_train[i]
         temp_train = [item for sublist in temp_train for item in sublist]
         temp_test = [item for sublist in temp_test for item in sublist]
         temp_y_train = [item for sublist in temp_y_train for item in sublist]
         temp_y_test = [item for sublist in temp_y_test for item in sublist]
+        
         # print(np.unique(np.array(temp_y_test),return_counts=True))
 
-        temp_y_train=LabelEncoder().fit_transform(temp_y_train)
-        # temp_y_test=LabelEncoder().fit_transform(temp_y_test) No hace falta porque las etiquetas son binarias 1/0 y ya están bien
-        # print(np.unique(np.array(temp_y_test),return_counts=True))
+
 
         temp_train,temp_val,temp_y_train,temp_y_val = train_test_split(temp_train,temp_y_train,train_size=0.9,stratify=temp_y_train,random_state=42)
         print("Creating dataloaders")
@@ -141,15 +131,18 @@ if __name__ == "__main__":
         all_labels=np.array(all_labels)
         all_preds=np.array(all_preds)
         print(all_preds.shape)
-        roc1=roc_auc_score(all_labels, 1-all_preds[:,1])
-        roc=roc_auc_score(all_labels, all_preds[:,1])
+
+        pr=[0 if pred[5]> pred[i] else 1 for pred in all_preds]
+        labels=[0 if label ==5 else 1 for label in all_labels]
+        roc1=roc_auc_score(labels, 1-all_preds[:,5])
+        roc=roc_auc_score(labels, all_preds[:,5])
         if roc1>roc:
             roc=roc1
             
         print(f"ROC AUC for class {i} vs Real: {roc:.4f}")
-        pr=[0 if pred[1]> pred[0] else 1 for pred in all_preds]
         accuracy=accuracy_score(all_labels,pr)
         print(f"Accuracy for class {i} vs Real: {accuracy:.4f}")
+        
         
         # preds=all_preds[:,5]
         # print(all_preds.shape)
