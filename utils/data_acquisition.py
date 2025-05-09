@@ -416,8 +416,26 @@ class data_set_N_with_nature():
         test=[]
         y_train=[]
         y_test=[]
+        
         # vals=['stable_diffusion_v_1_4','stable_diffusion_v_1_5','BigGan']
-        vals=['Midjourney',"VQDM","BigGan"]#entrenar solo con modelos de difussion (midjourney no se sabe que es)
+        
+        
+        # vals=['Midjourney',"VQDM","BigGan"]#entrenar solo con modelos de difussion (midjourney no se sabe que es)
+            #order ['ADM' 'GLIDE' 'stable_diffusion_v_1_4' 'stable_diffusion_v_1_5' 'wukong']
+            
+        # vals=['GLIDE',"VQDM","stable_diffusion_v_1_5"]#entrenar con SD 1.4 y test con 1.5 (ver si son muy parecidos)
+            #order ['ADM' 'BigGan' 'Midjourney' 'stable_diffusion_v_1_4' 'wukong']
+            
+        # vals=['ADM',"wukong","GLIDE"] #
+            #order ['BigGan' 'Midjourney' 'VQDM' 'stable_diffusion_v_1_4' 'stable_diffusion_v_1_5']
+        
+        # vals=['wukong',"stable_diffusion_v_1_4","stable_diffusion_v_1_5"] #se dejan fuera todos los modelos que hacen uso de CLIP
+            #order ['ADM' 'BigGan' 'GLIDE' 'Midjourney' 'VQDM']
+        
+        vals=[] #all
+            #order ['ADM' 'BigGan' 'GLIDE' 'Midjourney' 'VQDM' 'real' 'stable_diffusion_v_1_4' 'stable_diffusion_v_1_5' 'wukong']
+
+
 
         itera=os.walk(self.route)
         datasets=next(iter(itera))[1]
@@ -430,14 +448,14 @@ class data_set_N_with_nature():
                 
                 train.append(glob(direct+'train/ai/*.PNG')+glob(direct+'train/ai/*.png'))
                 y_train.append([dataset]*len(train[len(train)-1]))
-        # nature1=glob(self.route_nature+"/val/nature/*.JPEG")
+        nature1=glob(self.route_nature+"/val/nature/*.JPEG")
 
-        # test.append(nature1)
-        # y_test.append(["real"]*len(nature1))
+        test.append(nature1)
+        y_test.append(["real"]*len(nature1))
         
-        # nature1=glob(self.route_nature+"/train/nature/*.JPEG")
-        # train.append(nature1)
-        # y_train.append(["real"]*len(nature1))
+        nature1=glob(self.route_nature+"/train/nature/*.JPEG")
+        train.append(nature1)
+        y_train.append(["real"]*len(nature1))
             
 
         train = [item for sublist in train for item in sublist]
@@ -789,9 +807,17 @@ class data_set_binary_synth():
         test = [item for sublist in test for item in sublist]
         y_train = [item for sublist in y_train for item in sublist]
         y_test = [item for sublist in y_test for item in sublist]
+        
+        encoder=LabelEncoder().fit(y_train)
+        y_train=encoder.transform(y_train)
+        y_test=encoder.transform(y_test)
+        
+        print(encoder.classes_)
+
+        train,val,y_train,y_val = train_test_split(train,y_train,train_size=train_size,stratify=y_train,random_state=random_state)
 
 
-        return train,y_train
+        return train,val,y_train,y_val
 
     def make_pairs(self,x, y):
         """Creates a tuple containing image pairs with corresponding label.

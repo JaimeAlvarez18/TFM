@@ -26,12 +26,18 @@ if __name__ == "__main__":
     EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"
     LOSS="SupConLoss"
-    CLASSES=2
-    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_SYNTH_{LOSS}_TODOS.npz'
+    CLASSES=5
+    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_182_{CLASSES}_GLIDE_VQDM_sd1_5_{LOSS}.npz'
+    
+    
+
+    
     
     loader_data = data_set_with_nature('Datasets/GenImage/')
     train,val,test,y_train,y_val,y_test = loader_data.get_data()
-    # train,y_train = loader_data.get_data()
+    # loader_data = data_set_binary_synth()
+    # train,val,y_train,y_val = loader_data.get_data()
+    print(np.unique(np.array(y_train),return_counts=True))
     
     print("Creating dataloaders")
     train_dataset=test_dataset(train,y_train,device,RESOLUTION)

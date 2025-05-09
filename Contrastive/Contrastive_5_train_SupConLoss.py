@@ -22,9 +22,9 @@ if __name__ == "__main__":
     MARGIN=1
     EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"
-    PATH_TO_SAVE=f'Models/Contrastive_Models/Contrastive_b0_{EMBEDDING_SIZE}_{BATCH_SIZE}_5_BigGan_Midjourney_VQDM_SupConLoss.pth'
+    PATH_TO_SAVE=f'Models/Contrastive_Models/Contrastive_b0_{EMBEDDING_SIZE}_{BATCH_SIZE}_9_SupConLoss.pth'
     
-  
+
     retrain=False
     if len(sys.argv) > 1:
         retrain=True
@@ -42,10 +42,10 @@ if __name__ == "__main__":
     val_dataset=test_dataset(val,y_val,device,RESOLUTION)
     val_dataloader=DataLoader(val_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
 
-    test_data=test_dataset(test,y_test,device,RESOLUTION)
-    test_dataloader=DataLoader(test_data,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
+    # test_data=test_dataset(test,y_test,device,RESOLUTION)
+    # test_dataloader=DataLoader(test_data,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
 
-    del train,val,test,y_train,y_test,y_val,train_dataset,val_dataset,test_data
+    del train,val,test,y_train,y_test,y_val,train_dataset,val_dataset#,test_data
     gc.collect()
     torch.cuda.empty_cache() 
     best=9999999.9
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     scaler = amp.GradScaler()
 
     print("Training model...")
-    EPOCHS=1
+    EPOCHS=3
     train_loss=[]
     train_accuracy=[]
     best=999999
@@ -133,47 +133,48 @@ if __name__ == "__main__":
         val_total = 0
 
         # Validation loop
-        # with torch.no_grad():
-        #     for image1, label in tqdm(val_dataloader, desc=f"Validating Epoch {epoch + 1}/{EPOCHS}"):
+        with torch.no_grad():
+            for image1, label in tqdm(val_dataloader, desc=f"Validating Epoch {epoch + 1}/{EPOCHS}"):
                 
-        #         #Data to GPU
-        #         image1 = image1.to(device)
-        #         label = label.to(device)
+                #Data to GPU
+                image1 = image1.to(device)
+                label = label.to(device)
 
-        #         with amp.autocast(device_type=device):  # Automatically choose precision (float16 for ops that benefit)
-        #         # Forward pass
-        #             pred1 = model.predict_one_image(image1)
-        #             pred1=pred1.unsqueeze(1)
-        #             loss = criterion(pred1,label)
-        #         if math.isnan(loss.item()):
-        #             print(pred1,label)
+                with amp.autocast(device_type=device):  # Automatically choose precision (float16 for ops that benefit)
+                # Forward pass
+                    pred1 = model.predict_one_image(image1)
+                    pred1=pred1.unsqueeze(1)
+                    loss = criterion(pred1,label)
 
-        #         #Free memory
-        #         del image1
-        #         gc.collect()
-        #         torch.cuda.empty_cache()
-        #         scaler.scale(loss)
+                #Free memory
+                del image1
+                gc.collect()
+                torch.cuda.empty_cache()
+                scaler.scale(loss)
 
-        #         # Calculate loss
+                # Calculate loss
                 
 
-        #         # Track running loss and accuracy
-        #         running_loss += loss.item()
+                # Track running loss and accuracy
+
+                if np.isnan(loss.item()) == False:
+                    running_loss += loss.item()
                 
                     
 
-        #         val_total += label.size(0)
+                val_total += label.size(0)
 
-        #         #Free memory
-        #         del pred1,label,loss
-        #         gc.collect()
-        #         torch.cuda.empty_cache()
+                #Free memory
+                del pred1,label,loss
+                gc.collect()
+                torch.cuda.empty_cache()
 
-        # # Calculate validation loss and accuracy
-        # val_loss_value = running_loss / len(val_dataloader)
-        # val_loss.append(val_loss_value)
-        # if val_loss_value<=best:
-            # best=val_loss_value
+        # Calculate validation loss and accuracy
+        val_loss_value = running_loss / len(val_dataloader)
+        val_loss.append(val_loss_value)
+        print(val_loss_value)
+        if val_loss_value<=best:
+            best=val_loss_value
         checkpoint = {
                 "model_state_dict": model.state_dict(),
                 "model_type": model.type,
@@ -181,12 +182,11 @@ if __name__ == "__main__":
                 "best_loss":best
             }
         torch.save(checkpoint, PATH_TO_SAVE)
-        print(len(val_dataloader),len(train_dataloader))
-        print()
+
         print('-'*60)
         # Print results for the epoch
         print(f"Epoch [{epoch + 1}/{EPOCHS}]")
         print(f"Train Loss: {train_loss_value:.4f}")
-        # print(f"Val Loss: {val_loss_value:.4f}")
+        print(f"Val Loss: {val_loss_value:.4f}")
         print('-'*60)
         print()
