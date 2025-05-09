@@ -27,7 +27,9 @@ if __name__ == "__main__":
     EFFICIENTNET_TYPE="efficientnet-b0"
     LOSS="SupConLoss"
     CLASSES=5
-    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_182_{CLASSES}_GLIDE_VQDM_sd1_5_{LOSS}.npz'
+    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_182_{CLASSES}_{LOSS}.npz'
+    
+    
     
     
 

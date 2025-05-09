@@ -322,13 +322,15 @@ class data_set_with_nature():
             y_train.append([dataset]*len(train[index]))
             y_test.append([dataset]*len(test[index]))
         
-        nature1=glob(self.route_nature+"/val/nature/*.JPEG")
+        nature1=glob(self.route+"BigGan/val/nature/*.JPEG")
 
         test.append(nature1)
         y_test.append(["real"]*len(nature1))
+        print(len(nature1))
         
         nature1=glob(self.route_nature+"/train/nature/*.JPEG")
         train.append(nature1)
+        print(len(nature1))
         y_train.append(["real"]*len(nature1))
             
 

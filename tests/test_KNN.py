@@ -25,7 +25,7 @@ def print_confusion_matrix(cm):
     
     # Print each row
     for i, row in enumerate(cm):
-        print(f"True {i:2} ", " ".join([f"{val:4}" for val in row]))
+        print(f" ".join([f"{val:4}" for val in row]))
 
 
 
@@ -41,11 +41,13 @@ if __name__ == "__main__":
     EFFICIENTNET_TYPE="efficientnet-b0"
     CLASSES=8
     LOSS="SupConLoss"
-    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{CLASSES}_{LOSS}.npz'
+    path_embeddings=f'Models/Embeddings/embeddings_128_182_5_SupConLoss.npz'
     OUTPUT=f'Results/outputs_Classification_KNN_{EMBEDDING_SIZE}_{BATCH_SIZE}_{CLASSES}_{LOSS}.csv'
     
     loader_data = data_set_with_nature('Datasets/GenImage/')
     train,val,test,y_train,y_val,y_test = loader_data.get_data()
+    
+    print(np.unique(np.array(y_test),return_counts=True))
     
     print("Creating dataloaders")
     train_dataset=test_dataset(train,y_train,device,RESOLUTION)
@@ -63,6 +65,7 @@ if __name__ == "__main__":
     embs = data['embeddings']
     labels = data['labels']
 
+    print(np.unique(labels,return_counts=True))
 
 
     
@@ -85,6 +88,8 @@ if __name__ == "__main__":
             embeddings=embeddings.cpu().numpy()
             # embs_batch = torch.stack(embs).to(device)  # Stack embeddings for parallel computation
             predictions=knn.predict(embeddings)
+            # print(predictions)
+            # print(label)
             # Convert label to numpy and store results
             label = label.cpu().numpy()
             all_labels.extend(label)
@@ -121,9 +126,9 @@ if __name__ == "__main__":
     
     print("-"*100)
     print("-"*100)
-    print(f"Precis zero-shot: BigGan{precision1[0]:.4f}; Real {precision1[1]:.4f}; SD 1.4 {precision1[2]:.4f}; SD 1.5 {precision1[3]:.4f}")
-    print(f"Recall zero-shot: BigGan{recall1[0]:.4f}; Real {recall1[1]:.4f}; SD 1.4 {recall1[2]:.4f}; SD 1.5 {recall1[3]:.4f}")
-    print(f"F1-sco zero-shot: BigGan{f11[0]:.4f}; Real {f11[1]:.4f}; SD 1.4 {f11[2]:.4f}; SD 1.5 {f11[3]:.4f}")
+    print(f"Precis zero-shot: {precision1[0]:.4f};  {precision1[1]:.4f};  {precision1[2]:.4f};  {precision1[3]:.4f}")
+    print(f"Recall zero-shot: {recall1[0]:.4f};  {recall1[1]:.4f};  {recall1[2]:.4f};  {recall1[3]:.4f}")
+    print(f"F1-sco zero-shot: {f11[0]:.4f};  {f11[1]:.4f}; {f11[2]:.4f}; {f11[3]:.4f}")
     print("-"*100)
     print(f"Total precis zero-shot: {precision2:.4f}")
     print(f"Total recall zero-shot: {recall2:.4f}")

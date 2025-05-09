@@ -59,16 +59,19 @@ if __name__ == "__main__":
     data = np.load(path_embeddings)
     embs = data['embeddings']
     labels = data['labels']
-    mask=(labels==1) | (labels==5)
+    mask=(labels==1) | (labels==5) 
     # mask = (all_labels == i) | (all_labels == 5)
     embs=embs[mask]
-    labels=labels[mask]
+    labels1=labels[mask]
+    
+    labels = [0 if label==5 else 1 for label in labels1]
+    labels=np.array(labels)
+    print(np.unique(labels,return_counts=True))
 
 
 
     
     knn=KNeighborsClassifier(n_neighbors=11)
-    # knn = RandomForestClassifier(n_estimators=2)
     knn.fit(embs,labels)
     
     
@@ -103,11 +106,11 @@ if __name__ == "__main__":
         temp_y_test = [item for sublist in temp_y_test for item in sublist]
         # print(np.unique(np.array(temp_y_test),return_counts=True))
 
-        temp_y_train=LabelEncoder().fit_transform(temp_y_train)
+        # temp_y_train=LabelEncoder().fit_transform(temp_y_train)
         # temp_y_test=LabelEncoder().fit_transform(temp_y_test) No hace falta porque las etiquetas son binarias 1/0 y ya están bien
         # print(np.unique(np.array(temp_y_test),return_counts=True))
 
-        temp_train,temp_val,temp_y_train,temp_y_val = train_test_split(temp_train,temp_y_train,train_size=0.9,stratify=temp_y_train,random_state=42)
+        temp_train,temp_val,temp_y_train,temp_y_val = train_test_split(temp_train,temp_y_train,train_size=0.9,stratify=temp_y_train,random_state=5)
         print("Creating dataloaders")
         train_dataset=test_dataset(temp_train,temp_y_train,device,RESOLUTION)
         train_dataloader=DataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=8,prefetch_factor=8)
@@ -141,13 +144,13 @@ if __name__ == "__main__":
         all_labels=np.array(all_labels)
         all_preds=np.array(all_preds)
         print(all_preds.shape)
-        roc1=roc_auc_score(all_labels, 1-all_preds[:,1])
-        roc=roc_auc_score(all_labels, all_preds[:,1])
-        if roc1>roc:
-            roc=roc1
+        # roc1=roc_auc_score(all_labels, 1-all_preds[:,1])
+        roc=roc_auc_score(all_labels, all_preds[:,0])
+        # if roc1>roc:
+        #     roc=roc1
             
         print(f"ROC AUC for class {i} vs Real: {roc:.4f}")
-        pr=[0 if pred[1]> pred[0] else 1 for pred in all_preds]
+        pr=[0 if pred[0]> pred[1] else 1 for pred in all_preds]
         accuracy=accuracy_score(all_labels,pr)
         print(f"Accuracy for class {i} vs Real: {accuracy:.4f}")
         
