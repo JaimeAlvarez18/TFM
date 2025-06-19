@@ -978,8 +978,8 @@ def create_and_save_ALL_embeddings(model,train_dataloader,path):
         image1 = image1.to(device)
         with amp.autocast(device_type='cuda'):
             embs=model.predict_one_image(image1)
-        embs=embs.detach().cpu()
-        label=label.numpy()
+        embs=embs.detach().cpu().to(torch.float16)
+        label=label.numpy().astype(np.float16)
         embeddings+=embs
         labels.extend(label)
 
@@ -987,8 +987,8 @@ def create_and_save_ALL_embeddings(model,train_dataloader,path):
         
         gc.collect()
         torch.cuda.empty_cache()
-    labels=np.array(labels)
-    embeddings=np.array(embeddings)
+    labels=np.array(labels,dtype=np.float16)
+    embeddings=np.array(embeddings,dtype=np.float16)
     np.savez(path, embeddings=embeddings, labels=labels)
 
     

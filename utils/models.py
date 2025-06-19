@@ -27,8 +27,12 @@ class siamese_model(nn.Module):
         return emb1,emb2
     
     def predict_one_image(self,im1):
-
+        
         emb1=self.efficientNet(im1)
+        if torch.isnan(emb1).any():
+            print("Este valor es nan")
+        # print(im1)
+        # print(emb1)
         del im1
         gc.collect()
         torch.cuda.empty_cache()

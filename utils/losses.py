@@ -134,8 +134,14 @@ class SupConLoss(torch.nn.Module):
         full_features = torch.cat(torch.unbind(features, dim=1), dim=0).to(features.device) # = [bsz*views, ...]
 
         # compute logits (cosine sim)
-        anchor_dot_contrast = torch.matmul(F.normalize(full_features),
-                                           F.normalize(full_features.T)) * torch.exp(self.temperature.to(features.device)).clamp(100) # = [bsz*views, bsz*views]
+        # anchor_dot_contrast = torch.matmul(F.normalize(full_features),
+        #                                    F.normalize(full_features.T)) * torch.exp(self.temperature.to(features.device)).clamp(100) # = [bsz*views, bsz*views]
+
+        temperature = self.temperature.clamp(min=1e-4, max=1e2).to(features.device)
+        anchor_dot_contrast = torch.matmul(
+            F.normalize(full_features, dim=1),
+            F.normalize(full_features, dim=1).T
+        ) / temperature
 
         loss = self._loss_from_dot(anchor_dot_contrast, mask, views, batch_size)
 
@@ -155,8 +161,11 @@ class SupConLoss(torch.nn.Module):
         exp_logits = torch.exp(logits) * logits_mask
         log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True) + self.epsilon)
 
+        mean_log_prob_pos = (mask * log_prob).sum(1) / (mask.sum(1) + self.epsilon)
+
+
         # compute mean of log-likelihood over positive
-        mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
+        # mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
 
         loss = - mean_log_prob_pos.view(views, batch_size).mean()
 

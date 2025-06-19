@@ -44,7 +44,7 @@ if __name__ == "__main__":
     EFFICIENTNET_TYPE="efficientnet-b0"
     CLASSES=2
     LOSS="SupConLoss"
-    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_{BATCH_SIZE}_{CLASSES}_{LOSS}.npz'
+    path_embeddings='Models/Embeddings/embeddings_128_182_5_SupConLoss.npz'
     OUTPUT=f'Results/outputs_Binary_Classification_KNN_{EMBEDDING_SIZE}_{BATCH_SIZE}_{CLASSES}_{LOSS}.csv'
     
     loader_data = data_set_binary_with_nature('Datasets/GenImage/')
@@ -59,13 +59,28 @@ if __name__ == "__main__":
     data = np.load(path_embeddings)
     embs = data['embeddings']
     labels = data['labels']
-    mask=(labels==1) | (labels==5) 
+    print(labels)
+    print(np.unique(labels,return_counts=True))
+    print(len(embs))
+    mask = ~np.isin(labels, [1, 6, 7])
+    print(np.unique(np.array(mask),return_counts=True))
     # mask = (all_labels == i) | (all_labels == 5)
     embs=embs[mask]
     labels1=labels[mask]
+    print(len(embs))
+    print(np.unique(labels1,return_counts=True))
     
     labels = [0 if label==5 else 1 for label in labels1]
     labels=np.array(labels)
+
+    zeros_idx = np.where(labels == 0)[0]
+    ones_idx = np.where(labels == 1)[0]
+    min_count = min(len(zeros_idx), len(ones_idx))
+    sampled_zeros = np.random.choice(zeros_idx, min_count, replace=False)
+    sampled_ones = np.random.choice(ones_idx, min_count, replace=False)
+    balanced_indices = np.concatenate((sampled_zeros, sampled_ones))
+    embs = embs[balanced_indices]
+    labels=labels[balanced_indices]
     print(np.unique(labels,return_counts=True))
 
 
@@ -145,7 +160,7 @@ if __name__ == "__main__":
         all_preds=np.array(all_preds)
         print(all_preds.shape)
         # roc1=roc_auc_score(all_labels, 1-all_preds[:,1])
-        roc=roc_auc_score(all_labels, all_preds[:,0])
+        roc=roc_auc_score(all_labels, all_preds[:,1])
         # if roc1>roc:
         #     roc=roc1
             

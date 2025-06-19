@@ -14,8 +14,15 @@ import time
 import numpy as np
 
 import sys
+import resource
+def set_memory_limit(gb):
+    import resource
+    soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+    resource.setrlimit(resource.RLIMIT_AS, (gb * 1024**3, hard))
+
 
 if __name__ == "__main__":
+    set_memory_limit(32)
     # Constants:
     BATCH_SIZE=182
     RESOLUTION=256
@@ -23,7 +30,7 @@ if __name__ == "__main__":
     EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"
     hora=time.time()
-    PATH_TO_SAVE=f'Models/Contrastive_Models/Contrastive_b0_{EMBEDDING_SIZE}_{BATCH_SIZE}_SYNTH_SupConLoss.pth'   
+    PATH_TO_SAVE=f'Models/Contrastive_Models/Contrastive_b0_{EMBEDDING_SIZE}_{BATCH_SIZE}_8_SupConLoss2Experimento.pth'   
     
     import torch.multiprocessing as mp
     mp.set_start_method("spawn", force=True)
@@ -33,21 +40,21 @@ if __name__ == "__main__":
         route=sys.argv[1]
 
     print("Getting data ...")
-    # loader_data = data_set('Datasets/GenImage/')
+    loader_data = data_set('Datasets/GenImage/')
     # loader_data = data_set_N_with_nature("Datasets/GenImage/")
-    loader_data = data_set_binary_synth()
+    # loader_data = data_set_binary_synth()
     
     # train,val,test,y_train,y_val,y_test = loader_data.get_data()
-    train,val,y_train,y_val = loader_data.get_data()
+    train,val,test,y_train,y_val,y_test = loader_data.get_data()
     
     print(len(train),len(y_train),len(val),len(y_val))
 
     print("Creating Dataloaders ...")
     train_dataset=test_dataset(train,y_train,device,RESOLUTION)
-    train_dataloader=DataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
+    train_dataloader=DataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=4,prefetch_factor=4)
 
     val_dataset=test_dataset(val,y_val,device,RESOLUTION)
-    val_dataloader=DataLoader(val_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
+    val_dataloader=DataLoader(val_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=4,prefetch_factor=4)
 
     # test_data=test_dataset(test,y_test,device,RESOLUTION)
     # test_dataloader=DataLoader(test_data,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
@@ -72,7 +79,7 @@ if __name__ == "__main__":
     scaler = amp.GradScaler()
 
     print("Training model...")
-    EPOCHS=3
+    EPOCHS=1
     train_loss=[]
     train_accuracy=[]
     best=999999
@@ -101,17 +108,21 @@ if __name__ == "__main__":
             with amp.autocast(device_type='cuda'):
                 # Forward pass
                 pred1 = model.predict_one_image(image1)
+                # print(pred1.shape,label.shape)
                 pred1=pred1.unsqueeze(1)
+                # print(pred1.shape)
 
                 # Calculate loss
                 loss = criterion(pred1,label)
-
+                # print(loss)
+            # print(torch.isnan(image1).any(),torch.isnan(pred1).any(),loss)
             #Free memory
             del image1
             gc.collect()
             torch.cuda.empty_cache()
 
-            
+            if torch.isnan(loss).any():
+                print("Este valor es nan")
 
             # Backward pass and optimization
             scaler.scale(loss).backward()  # Scaled loss for gradient computation
@@ -122,6 +133,7 @@ if __name__ == "__main__":
 
             # Track running loss and accuracy
             running_loss += loss.item()
+            # print(running_loss)
 
             #Free memory
             del label, loss,pred1
@@ -143,7 +155,7 @@ if __name__ == "__main__":
         # Validation loop
         with torch.no_grad():
             for image1, label in tqdm(val_dataloader, desc=f"Validating Epoch {epoch + 1}/{EPOCHS}"):
-                
+                # print(image1)
                 #Data to GPU
                 image1 = image1.to(device)
                 label = label.to(device)
@@ -165,6 +177,7 @@ if __name__ == "__main__":
                 # Track running loss and accuracy
                 if np.isnan(loss.item()) == False:
                     running_loss += loss.item()
+                # print(pred1,label)
 
                 val_total += label.size(0)
 
@@ -190,7 +203,7 @@ if __name__ == "__main__":
         print('-'*60)
         # Print results for the epoch
         print(f"Epoch [{epoch + 1}/{EPOCHS}]")
-        # print(f"Train Loss: {train_loss_value:.4f}")
+        print(f"Train Loss: {train_loss_value:.4f}")
         print(f"Val Loss: {val_loss_value:.4f}")
         print('-'*60)
         print()

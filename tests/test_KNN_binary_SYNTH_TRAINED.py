@@ -61,6 +61,7 @@ if __name__ == "__main__":
     data = np.load(path_embeddings)
     embs = data['embeddings']
     labels = data['labels']
+    print(embs.shape)
     # mask = (all_labels == i) | (all_labels == 5)
     embs=embs
     labels=labels

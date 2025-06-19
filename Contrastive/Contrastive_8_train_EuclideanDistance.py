@@ -7,7 +7,7 @@ import gc
 mp.set_start_method('spawn', force=True)
 import torch.amp as amp
 
-from utils.data_acquisition import data_set,images_Dataset,data_set_5
+from utils.data_acquisition import data_set,images_Dataset
 from utils.models import siamese_model
 from utils.losses import ContrastiveLoss
 import time
@@ -44,13 +44,13 @@ if __name__ == "__main__":
 
     print("Creating Dataloaders ...")
     train_dataset=images_Dataset(train,y_train,device,RESOLUTION)
-    train_dataloader=DataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
+    train_dataloader=DataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=4,prefetch_factor=2)
 
     val_dataset=images_Dataset(val,y_val,device,RESOLUTION)
-    val_dataloader=DataLoader(val_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
+    val_dataloader=DataLoader(val_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=4,prefetch_factor=2)
 
     test_dataset=images_Dataset(test,y_test,device,RESOLUTION)
-    test_dataloader=DataLoader(test_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
+    test_dataloader=DataLoader(test_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=4,prefetch_factor=2)
 
     del train,val,test,y_train,y_test,y_val,train_dataset,val_dataset,test_dataset
     gc.collect()

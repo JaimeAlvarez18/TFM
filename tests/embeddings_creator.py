@@ -15,8 +15,13 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import torch.amp as amp
 import time
+def set_memory_limit(gb):
+    import resource
+    soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+    resource.setrlimit(resource.RLIMIT_AS, (gb * 1024**3, hard))
 
 if __name__ == "__main__":
+    set_memory_limit(50)
     if len(sys.argv) == 2:
         route_encoder=sys.argv[1]
         
@@ -27,8 +32,7 @@ if __name__ == "__main__":
     EFFICIENTNET_TYPE="efficientnet-b0"
     LOSS="SupConLoss"
     CLASSES=5
-    path_embeddings=f'Models/Embeddings/embeddings_{EMBEDDING_SIZE}_182_{CLASSES}_{LOSS}.npz'
-    
+    path_embeddings=f'Models/Embeddings/embeddings_128_182_SYNTH_SupConLoss_TODOS.npz'
     
     
     
@@ -43,7 +47,7 @@ if __name__ == "__main__":
     
     print("Creating dataloaders")
     train_dataset=test_dataset(train,y_train,device,RESOLUTION)
-    train_dataloader=DataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=16,prefetch_factor=8)
+    train_dataloader=DataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=4,prefetch_factor=4)
 
     # test_data=test_dataset(test,y_test,device,RESOLUTION)
     # test_dataloader=DataLoader(test_data,batch_size=BATCH_SIZE,shuffle=True,num_workers=16,prefetch_factor=8)
