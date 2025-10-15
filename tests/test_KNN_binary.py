@@ -1,5 +1,5 @@
 import sys
-from utils.data_acquisition import data_set,images_Dataset,test_dataset,data_set_with_nature,data_set_binary_with_nature
+from utils.data_acquisition import data_set,images_Dataset,test_dataset,data_set_with_nature,data_set_binary_with_nature,data_set_binary_synth
 import torch
 from torch.utils.data import DataLoader
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -44,11 +44,14 @@ if __name__ == "__main__":
     EFFICIENTNET_TYPE="efficientnet-b0"
     CLASSES=2
     LOSS="SupConLoss"
-    path_embeddings='Models/Embeddings/embeddings_128_182_5_SupConLoss.npz'
+    path_embeddings="Models/Embeddings/embeddings_128_182_MD_Real_VQDM_SupConLoss.npz"
     OUTPUT=f'Results/outputs_Binary_Classification_KNN_{EMBEDDING_SIZE}_{BATCH_SIZE}_{CLASSES}_{LOSS}.csv'
     
-    loader_data = data_set_binary_with_nature('Datasets/GenImage/')
-    train,test,y_train,y_test = loader_data.get_data()
+    # loader_data = data_set_binary_with_nature('Datasets/GenImage/')
+    # train,test,y_train,y_test = loader_data.get_data()
+    testing_data=data_set_binary_synth()
+    test,y_test = testing_data.get_data_test()
+    
     
     checkpoint=torch.load(route_encoder,weights_only=False)
     model= siamese_model(checkpoint["model_type"],device,EMBEDDING_SIZE)
@@ -62,7 +65,7 @@ if __name__ == "__main__":
     print(labels)
     print(np.unique(labels,return_counts=True))
     print(len(embs))
-    mask = ~np.isin(labels, [1, 6, 7])
+    mask = ~np.isin(labels,[0,1,2,6,7,8])
     print(np.unique(np.array(mask),return_counts=True))
     # mask = (all_labels == i) | (all_labels == 5)
     embs=embs[mask]
@@ -90,20 +93,19 @@ if __name__ == "__main__":
     knn.fit(embs,labels)
     
     
-    
     suma=0
     total=0
     index = 0
     #Convert indexes of generators in dataset with nature to generators with no nature
     dictionary={
-        0:1,
-        1:7,
-        2:4,
-        3:2,
+        0:4,
+        1:0,
+        2:1,
+        3:8,
         4:3,
         5:6,
-        6:0,
-        7:8
+        6:2,
+        7:7
     }
 
     

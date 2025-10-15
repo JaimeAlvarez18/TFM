@@ -22,7 +22,7 @@ if __name__ == "__main__":
     MARGIN=1
     EMBEDDING_SIZE=128
     EFFICIENTNET_TYPE="efficientnet-b0"
-    PATH_TO_SAVE=f'Models/Contrastive_Models/Contrastive_b0_{EMBEDDING_SIZE}_{BATCH_SIZE}_9_SupConLoss.pth'
+    PATH_TO_SAVE=f'Models/Contrastive_Models/Contrastive_b0_{EMBEDDING_SIZE}_{BATCH_SIZE}_MD_Real_VQDM_SupConLoss.pth'
     
 
     retrain=False
@@ -34,13 +34,14 @@ if __name__ == "__main__":
     loader_data = data_set_N_with_nature('Datasets/GenImage/')
     train,val,test,y_train,y_val,y_test = loader_data.get_data()
     print(len(train),len(val),len(test),len(y_train),len(y_test),len(y_val))
+    
 
     print("Creating Dataloaders ...")
     train_dataset=test_dataset(train,y_train,device,RESOLUTION)
-    train_dataloader=DataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
+    train_dataloader=DataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=8,prefetch_factor=8)
 
     val_dataset=test_dataset(val,y_val,device,RESOLUTION)
-    val_dataloader=DataLoader(val_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
+    val_dataloader=DataLoader(val_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=8,prefetch_factor=8)
 
     # test_data=test_dataset(test,y_test,device,RESOLUTION)
     # test_dataloader=DataLoader(test_data,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
