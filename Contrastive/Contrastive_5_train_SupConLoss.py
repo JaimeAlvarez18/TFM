@@ -1,193 +1,172 @@
-
-import torch
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-device ='cuda' if torch.cuda.is_available() else 'cpu'
-import gc         
-import torch.amp as amp
+# ddp_train.py
+import os
+import sys
 import math
-
-from utils.data_acquisition import data_set_N_with_nature,images_Dataset,test_dataset
-from utils.models import siamese_model
-from utils.losses import ContrastiveLoss,SupConLoss
-import time
+import gc
+import copy
+import torch
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data import DataLoader, distributed
+from tqdm import tqdm
 import numpy as np
 
-import sys
+from transformers import AutoModelForImageClassification
+from utils.data_acquisition import data_set_N_with_nature, BIG_DATALOADER, read_files, test_dataset
+from utils.losses import SupConLoss
 
-if __name__ == "__main__":
-    # Constants:
-    BATCH_SIZE=182
-    RESOLUTION=256
-    MARGIN=1
-    EMBEDDING_SIZE=128
-    EFFICIENTNET_TYPE="efficientnet-b0"
-    PATH_TO_SAVE=f'Models/Contrastive_Models/Contrastive_b0_{EMBEDDING_SIZE}_{BATCH_SIZE}_MD_Real_VQDM_SupConLoss.pth'
-    
+def setup(rank, world_size):
+    os.environ.setdefault("MASTER_ADDR", "localhost")
+    os.environ.setdefault("MASTER_PORT", "12355")
+    dist.init_process_group(backend="nccl", init_method="env://", world_size=world_size, rank=rank)
 
-    retrain=False
-    if len(sys.argv) > 1:
-        retrain=True
-        route=sys.argv[1]
+def cleanup():
+    try:
+        dist.barrier()
+    except Exception:
+        pass
+    dist.destroy_process_group()
 
-    print("Getting data ...")
-    loader_data = data_set_N_with_nature('Datasets/GenImage/')
-    train,val,test,y_train,y_val,y_test = loader_data.get_data()
-    print(len(train),len(val),len(test),len(y_train),len(y_test),len(y_val))
-    
+def all_gather_tensor(tensor: torch.Tensor, device: torch.device):
+    """Gather arbitrary-size first-dim tensor from all ranks."""
+    world_size = dist.get_world_size()
+    local_size = torch.tensor([tensor.size(0)], device=device, dtype=torch.long)
+    sizes = [torch.tensor([0], device=device, dtype=torch.long) for _ in range(world_size)]
+    dist.all_gather(sizes, local_size)
+    sizes = [int(s.item()) for s in sizes]
+    max_size = max(sizes)
 
-    print("Creating Dataloaders ...")
-    train_dataset=test_dataset(train,y_train,device,RESOLUTION)
-    train_dataloader=DataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=8,prefetch_factor=8)
-
-    val_dataset=test_dataset(val,y_val,device,RESOLUTION)
-    val_dataloader=DataLoader(val_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=8,prefetch_factor=8)
-
-    # test_data=test_dataset(test,y_test,device,RESOLUTION)
-    # test_dataloader=DataLoader(test_data,batch_size=BATCH_SIZE,shuffle=True,num_workers=12,prefetch_factor=8)
-
-    del train,val,test,y_train,y_test,y_val,train_dataset,val_dataset#,test_data
-    gc.collect()
-    torch.cuda.empty_cache() 
-    best=9999999.9
-    print("Creating model...")
-    if retrain:
-        checkpoint=torch.load(route)
-        model=siamese_model(checkpoint["model_type"],device,EMBEDDING_SIZE)
-        model.load_state_dict(checkpoint["model_state_dict"])
-        model.to(device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        best=checkpoint["best_loss"]
+    if local_size.item() < max_size:
+        pad_shape = (max_size - local_size.item(),) + tensor.shape[1:]
+        pad = torch.zeros(pad_shape, device=device, dtype=tensor.dtype)
+        tensor_padded = torch.cat([tensor, pad], dim=0)
     else:
-        model=siamese_model(EFFICIENTNET_TYPE,device,EMBEDDING_SIZE).to(device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    criterion = SupConLoss()
-    scaler = amp.GradScaler()
+        tensor_padded = tensor
 
-    print("Training model...")
-    EPOCHS=3
-    train_loss=[]
-    train_accuracy=[]
-    best=999999
-    val_loss=[]
-    val_accuracy=[]
+    gather_list = [torch.zeros_like(tensor_padded) for _ in range(world_size)]
+    dist.all_gather(gather_list, tensor_padded)
 
+    out_tensors = [g[:s] for g, s in zip(gather_list, sizes) if s > 0]
+    return torch.cat(out_tensors, dim=0) if out_tensors else torch.empty((0,) + tensor.shape[1:], device=device, dtype=tensor.dtype)
+
+def main():
+    CHECKPOINT_PATH = "Models/Contrastive_Models/Contrastive_Mamba_MINIBATCH_128_8192_sd1_5_sd1_4_Wukong_MJ_glide_Partial_Checkpoint.pth"
+    GLOBAL_BATCH = 8192
+    RESOLUTION = 256
+    EMBEDDING_SIZE = 128
+    MAX_MINIBATCH_PROCESS = 4
+    USE_AMP = True
+
+    local_rank = int(os.environ["LOCAL_RANK"])
+    world_size = int(os.environ["WORLD_SIZE"])
+    rank = int(os.environ.get("RANK", local_rank))
+    print(f"Start rank {rank} local_rank {local_rank} world_size {world_size}")
+
+    setup(rank, world_size)
+    torch.cuda.set_device(local_rank)
+    device = torch.device(f"cuda:{local_rank}")
+
+    per_gpu_batch = GLOBAL_BATCH // world_size
+    if per_gpu_batch < 1:
+        raise ValueError("GLOBAL_BATCH smaller than world_size.")
+    if rank == 0:
+        print(f"Using global batch {GLOBAL_BATCH} → per-GPU batch {per_gpu_batch}")
+
+    loader_data = data_set_N_with_nature('GenImage_resized/')
+    train, val, test, y_train, y_val, y_test = loader_data.get_data()
+
+    train_dataset = BIG_DATALOADER(train, y_train, device, RESOLUTION)
+    train_sampler = distributed.DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=True)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=per_gpu_batch,
+        sampler=train_sampler,
+        num_workers=4,
+        pin_memory=True,
+        prefetch_factor=2,
+        drop_last=False,
+    )
+
+    model = AutoModelForImageClassification.from_pretrained("nvidia/MambaVision-L3-256-21K",
+                                                            trust_remote_code=True, dtype="auto")
+    model.to(device)
+    if os.path.exists(CHECKPOINT_PATH):
+        ckpt = torch.load(CHECKPOINT_PATH, map_location="cpu")
+        model.load_state_dict(ckpt["model_state_dict"])
+        if rank == 0:
+            print("✅ Loaded checkpoint from", CHECKPOINT_PATH)
+
+    model = DDP(model, device_ids=[local_rank], output_device=local_rank)
+    if rank == 0:
+        print("✅ Model wrapped in DDP")
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    criterion = SupConLoss().to(device)
+    scaler = torch.amp.GradScaler(enabled=USE_AMP)
+
+    EPOCHS = 3
     for epoch in range(EPOCHS):
-        # Set model to training mode
+        train_sampler.set_epoch(epoch)
         model.train()
 
-        # Initialize validation stats
         running_loss = 0.0
-        correct = 0
-        total = 0
+        pbar = tqdm(enumerate(train_loader), total=len(train_loader), desc=f"Epoch {epoch+1}/{EPOCHS}") if rank == 0 else enumerate(train_loader)
 
-        # Training loop
-        for image1, label in tqdm(train_dataloader, desc=f"Training Epoch {epoch + 1}/{EPOCHS}"):
+        for batch_idx, (routes, labels) in pbar:
+            routes = list(routes)
+            local_batch_size = len(routes)
+            if local_batch_size == 0:
+                continue
 
-            #Reset optimizer
-            optimizer.zero_grad()
+            chunk_size = math.ceil(local_batch_size / MAX_MINIBATCH_PROCESS)
+            chunked_routes = [routes[i*chunk_size:(i+1)*chunk_size] for i in range(math.ceil(local_batch_size / chunk_size))]
 
-            #Data to GPU
-            image1 = image1.to(device)
-            label = label.to(device)
+            optimizer.zero_grad(set_to_none=True)
+            embeddings_chunks = []
+            for chunk in chunked_routes:
+                imgs = read_files(np.array(chunk))
+                if isinstance(imgs, np.ndarray):
+                    imgs = torch.from_numpy(imgs)
+                imgs = imgs.to(device, non_blocking=True)
 
-            with amp.autocast(device_type='cuda'):
-                # Forward pass
-                pred1 = model.predict_one_image(image1)
-                pred1=pred1.unsqueeze(1)
+                with torch.amp.autocast(device_type='cuda', enabled=USE_AMP):
+                    out = model(imgs)['logits']
+                out = out.unsqueeze(1)
+                embeddings_chunks.append(out)
+                del imgs, out
+                gc.collect()
 
-                # Calculate loss
-                loss = criterion(pred1,label)
+            local_embeddings = torch.cat(embeddings_chunks, dim=0)
+            labels = torch.as_tensor(labels, device=device, dtype=torch.long)
 
-            #Free memory
-            del image1
-            gc.collect()
-            torch.cuda.empty_cache()
+            emb_all = all_gather_tensor(local_embeddings, device)
+            labels_all = all_gather_tensor(labels.view(-1, 1), device).view(-1)
 
-            
+            with torch.amp.autocast(device_type='cuda', enabled=USE_AMP):
+                loss = criterion(emb_all, labels_all)
 
-            # Backward pass and optimization
-            scaler.scale(loss).backward()  # Scaled loss for gradient computation
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
 
-            # Unscales gradients and updates the optimizer step
-            scaler.step(optimizer)  # Performs an optimizer step
-            scaler.update()  # Updates the scaler for the next iteration
-
-            # Track running loss and accuracy
             running_loss += loss.item()
+            if rank == 0 and (batch_idx % 10 == 0):
+                pbar.set_postfix({'batch_loss': loss.item(), 'avg_loss': running_loss / (batch_idx + 1)})
 
-            #Free memory
-            del label, loss,pred1
-            gc.collect()
+            del local_embeddings, emb_all, labels_all, labels, loss, embeddings_chunks
             torch.cuda.empty_cache()
+            gc.collect()
 
-        # Calculate training loss
-        train_loss_value = running_loss / len(train_dataloader)
-        train_loss.append(train_loss_value)
-        # Set model to evaluation mode
-        model.eval()
-
-        # Initialize validation stats
-        running_loss = 0.0
-        val_correct = 0
-        val_total = 0
-
-        # Validation loop
-        with torch.no_grad():
-            for image1, label in tqdm(val_dataloader, desc=f"Validating Epoch {epoch + 1}/{EPOCHS}"):
-                
-                #Data to GPU
-                image1 = image1.to(device)
-                label = label.to(device)
-
-                with amp.autocast(device_type=device):  # Automatically choose precision (float16 for ops that benefit)
-                # Forward pass
-                    pred1 = model.predict_one_image(image1)
-                    pred1=pred1.unsqueeze(1)
-                    loss = criterion(pred1,label)
-
-                #Free memory
-                del image1
-                gc.collect()
-                torch.cuda.empty_cache()
-                scaler.scale(loss)
-
-                # Calculate loss
-                
-
-                # Track running loss and accuracy
-
-                if np.isnan(loss.item()) == False:
-                    running_loss += loss.item()
-                
-                    
-
-                val_total += label.size(0)
-
-                #Free memory
-                del pred1,label,loss
-                gc.collect()
-                torch.cuda.empty_cache()
-
-        # Calculate validation loss and accuracy
-        val_loss_value = running_loss / len(val_dataloader)
-        val_loss.append(val_loss_value)
-        print(val_loss_value)
-        if val_loss_value<=best:
-            best=val_loss_value
-        checkpoint = {
-                "model_state_dict": model.state_dict(),
-                "model_type": model.type,
+        if rank == 0:
+            avg_loss = running_loss / max(len(train_loader), 1)
+            print(f"Epoch {epoch+1}/{EPOCHS} avg_loss: {avg_loss:.6f}")
+            ckpt = {
+                "model_state_dict": model.module.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
-                "best_loss":best
             }
-        torch.save(checkpoint, PATH_TO_SAVE)
+            torch.save(ckpt, f"checkpoint_epoch_{epoch+1}.pth")
 
-        print('-'*60)
-        # Print results for the epoch
-        print(f"Epoch [{epoch + 1}/{EPOCHS}]")
-        print(f"Train Loss: {train_loss_value:.4f}")
-        print(f"Val Loss: {val_loss_value:.4f}")
-        print('-'*60)
-        print()
+    cleanup()
+
+if __name__ == "__main__":
+    main()

@@ -3,6 +3,7 @@ from glob import glob
 import random
 random.seed(42)
 import os
+from sklearn.metrics import auc
 from torch.utils.data import Dataset
 import cv2
 import torch
@@ -12,7 +13,9 @@ from tqdm import tqdm
 import torch.amp as amp
 device='cuda' if torch.cuda.is_available() else 'cpu'
 import json
-import gc       
+import gc
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"       
 
 
 class images_Dataset(Dataset):
@@ -156,7 +159,7 @@ def read_files(routes):
         all_images.append(image1)
 
     #Data to tensor
-    all_images=torch.from_numpy(np.array(all_images)).to(torch.float32)
+    all_images=torch.from_numpy(np.array(all_images)).to(torch.float16)
     return all_images
     
 class mix_dataset(Dataset):
@@ -353,7 +356,7 @@ class data_set_with_nature():
         self.route=route
         self.route_nature="GenImage_resized/ADM"
 
-    def get_data(self,train_size=0.2,random_state=5):
+    def get_data(self,train_size=0.99,random_state=5):
         train=[]
         test=[]
         y_train=[]
@@ -372,11 +375,11 @@ class data_set_with_nature():
 
         test.append(nature1)
         y_test.append(["real"]*len(nature1))
-        print(len(nature1))
+        
         
         nature1=glob(self.route_nature+"/train/nature/*.JPEG")
         train.append(nature1)
-        print(len(nature1))
+        
         y_train.append(["real"]*len(nature1))
             
 
@@ -464,9 +467,25 @@ class data_set_N_with_nature():
         test=[]
         y_train=[]
         y_test=[]
+
+
+
+
+        # vals=['stable_diffusion_v_1_4','stable_diffusion_v_1_5','wukong',"glide","BigGan"] #ES4
+
+
+        # vals=["todos a entrenar perro"] #ES5
         
-        vals=['stable_diffusion_v_1_4','stable_diffusion_v_1_5','BigGan']
+        # vals=['ADM','BigGan','wukong',"glide","vqdm"] #ES3
+
+        # vals=['ADM','BigGan','Midjourney',"stable_diffusion_v_1_5","vqdm"]# ES2
+
+        # vals=['stable_diffusion_v_1_4','stable_diffusion_v_1_5','wukong',"glide","Midjourney"] #ES1
+
             # order ['ADM' 'Midjourney' 'glide' 'real' 'vqdm' 'wukong']
+
+
+
         
         # vals=['Midjourney',"VQDM","BigGan"]#entrenar solo con modelos de difussion (midjourney no se sabe que es)
             #order ['ADM' 'GLIDE' 'stable_diffusion_v_1_4' 'stable_diffusion_v_1_5' 'wukong']
@@ -485,6 +504,11 @@ class data_set_N_with_nature():
 
         # vals = ['stable_diffusion_v_1_4', 'stable_diffusion_v_1_5',"BigGan","ADM","GLIDE","wukong"]
 
+
+        # vals = ["glide","ADM","stable_diffusion_v_1_5","BigGan"] #New ES1
+        # vals = ["wukong","glide","ADM","stable_diffusion_v_1_5"] #New ES2
+        # vals = ["wukong","glide","stable_diffusion_v_1_5","Midjourney"] #New ES3
+        vals = ["wukong","stable_diffusion_v_1_4","Midjourney","vqdm"] #NEw ES5
 
 
         itera=os.walk(self.route)
@@ -1041,6 +1065,34 @@ def create_and_save_ALL_embeddings(model,train_dataloader,path,save):
     
     return embeddings,labels
 
+
+def create_and_save_ALL_embeddings_Mamba(model,train_dataloader,path,save,device1):
+    #Get embeddings representing each data generator
+    labels=[]
+    embeddings=[]
+    index=0
+    model.eval()
+    for image1, label in tqdm(train_dataloader, desc=f"Getting embedding {index + 1}/{len(train_dataloader)}"):
+        index += 1
+        image1 = image1.to(device1)
+        
+        embs=model(image1)['logits']
+        embs=embs.detach().cpu()
+        label=label.numpy()
+        embeddings+=embs
+        labels.extend(label)
+
+        del embs,label
+        
+        gc.collect()
+        torch.cuda.empty_cache()
+    labels=np.array(labels)
+    embeddings=np.array(embeddings)
+    if save:
+        np.savez(path, embeddings=embeddings, labels=labels)
+
+    
+    return embeddings,labels
 def get_N_embeddings(model,train_dataloader,N):
     #Get embeddings representing each data generator
     labels=[]
@@ -1070,3 +1122,114 @@ def get_N_embeddings(model,train_dataloader,N):
 
     
     return np.array(embeddings),np.array(labels)
+def compute_oscr_5classes(all_labels, probs, unseen_label=10):
+    """
+    Compute OSCR when you have arbitrary label values.
+    
+    Parameters:
+    -----------
+    all_labels : array, shape (N,)
+        True labels (e.g., values like 0,1,2,3,10 where 10 is unseen)
+    probs : array, shape (N, 5)
+        Predicted probabilities for 5 classes (first 4 are seen, last is unseen)
+    unseen_label : int or list
+        The label value(s) that represent unseen/unknown class (default: 10)
+    
+    Returns:
+    --------
+    oscr : float
+        OSCR score
+    ccr_list : list
+        CCR values at different thresholds
+    fpr_list : list
+        FPR values at different thresholds
+    thresholds : list
+        Threshold values
+    """
+    
+    # Handle unseen_label as list or single value
+    if isinstance(unseen_label, (list, tuple)):
+        unseen_mask = np.isin(all_labels, unseen_label)
+    else:
+        unseen_mask = all_labels == unseen_label
+    
+    seen_mask = ~unseen_mask
+    
+    # Get unique seen labels to create mapping
+    unique_seen_labels = np.unique(all_labels[seen_mask])
+    num_known_classes = len(unique_seen_labels)
+    
+    # Create mapping from original labels to indices 0,1,2,3
+    label_to_idx = {label: idx for idx, label in enumerate(unique_seen_labels)}
+    
+    print(f"Debug info:")
+    print(f"  Unique seen labels: {unique_seen_labels}")
+    print(f"  Label to index mapping: {label_to_idx}")
+    print(f"  Seen samples: {np.sum(seen_mask)}")
+    print(f"  Unseen samples: {np.sum(unseen_mask)}")
+    print(f"  Probs shape: {probs.shape}")
+    
+    # SEEN data
+    seen_labels = all_labels[seen_mask]
+    seen_probs = probs[seen_mask]
+    
+    # Map seen labels to indices 0-3
+    seen_labels_mapped = np.array([label_to_idx[label] for label in seen_labels])
+    
+    # Get predictions for seen data (among first num_known_classes only)
+    seen_predictions = np.argmax(seen_probs[:, :num_known_classes], axis=1)
+    seen_max_probs = np.max(seen_probs[:, :num_known_classes], axis=1)
+    
+    print(f"  Seen max probs range: [{seen_max_probs.min():.3f}, {seen_max_probs.max():.3f}]")
+    
+    # UNSEEN data
+    unseen_probs = probs[unseen_mask]
+    
+    # Get max probability for unseen data (model still outputs probs for first 4 classes)
+    unseen_max_probs = np.max(unseen_probs[:, :num_known_classes], axis=1)
+    
+    print(f"  Unseen max probs range: [{unseen_max_probs.min():.3f}, {unseen_max_probs.max():.3f}]")
+    
+    # Check if there's separation
+    print(f"  Mean seen prob: {seen_max_probs.mean():.3f}")
+    print(f"  Mean unseen prob: {unseen_max_probs.mean():.3f}")
+    
+    # Now compute OSCR
+    n_seen = len(seen_labels)
+    n_unseen = np.sum(unseen_mask)
+    
+    if n_seen == 0 or n_unseen == 0:
+        print("ERROR: Need both seen and unseen samples!")
+        return 0.0, [], [], []
+    
+    # Get thresholds
+    all_probs = np.concatenate([seen_max_probs, unseen_max_probs])
+    thresholds = np.sort(np.unique(all_probs))[::-1]
+    thresholds = np.concatenate([[1.0], thresholds, [0.0]])
+    
+    ccr_list = []
+    fpr_list = []
+    
+    for tau in thresholds:
+        # CCR: Correct Classification Rate on SEEN data
+        correct_and_confident = (seen_predictions == seen_labels_mapped) & (seen_max_probs > tau)
+        ccr = np.sum(correct_and_confident) / n_seen if n_seen > 0 else 0.0
+        
+        # FPR: False Positive Rate on UNSEEN data
+        false_positives = np.sum(unseen_max_probs >= tau)
+        fpr = false_positives / n_unseen if n_unseen > 0 else 0.0
+        
+        ccr_list.append(ccr)
+        fpr_list.append(fpr)
+    
+    # Compute OSCR as area under CCR vs FPR curve
+    if len(fpr_list) > 1 and len(ccr_list) > 1:
+        oscr = auc(fpr_list, ccr_list)
+    else:
+        oscr = 0.0
+    
+    print(f"  OSCR computed: {oscr:.4f}")
+    print(f"  CCR range: [{min(ccr_list):.3f}, {max(ccr_list):.3f}]")
+    print(f"  FPR range: [{min(fpr_list):.3f}, {max(fpr_list):.3f}]")
+    
+    return oscr, ccr_list, fpr_list, thresholds

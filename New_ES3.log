@@ -1,0 +1,8 @@
+Getting data ...
+TRAINING DATA:
+['ADM' 'BigGan' 'real' 'stable_diffusion_v_1_4' 'vqdm']
+(array([0, 1, 2, 3, 4]), array([161992, 161996, 157453, 161997, 162000]))
+Creating Dataloaders ...
+Creating model... retrain=False
+Training model...
+Training Epoch 1/1: 0it [00:00, ?it/s]Training Epoch 1/1: 1it [10:14, 614.63s/it]Training Epoch 1/1: 2it [21:00, 633.27s/it]Training Epoch 1/1: 3it [31:53, 642.14s/it]Training Epoch 1/1: 4it [42:38, 643.09s/it]Training Epoch 1/1: 5it [53:10, 639.15s/it]Training Epoch 1/1: 6it [1:01:49, 598.28s/it]Training Epoch 1/1: 7it [1:10:03, 564.25s/it]Training Epoch 1/1: 8it [1:18:18, 542.32s/it]Training Epoch 1/1: 9it [1:26:38, 529.03s/it]Training Epoch 1/1: 10it [1:35:42, 533.55s/it]Training Epoch 1/1: 11it [1:44:06, 524.70s/it]Training Epoch 1/1: 12it [1:52:48, 523.60s/it]Training Epoch 1/1: 13it [2:01:20, 520.29s/it]Training Epoch 1/1: 14it [2:09:58, 519.61s/it]Training Epoch 1/1: 15it [2:18:30, 517.26s/it]Training Epoch 1/1: 16it [2:27:00, 515.10s/it]Training Epoch 1/1: 17it [2:35:15, 509.07s/it]Training Epoch 1/1: 18it [2:43:26, 503.61s/it]Training Epoch 1/1: 19it [2:51:53, 504.66s/it]Training Epoch 1/1: 20it [3:00:33, 509.35s/it]Training Epoch 1/1: 21it [3:09:10, 511.55s/it]Training Epoch 1/1: 22it [3:17:13, 502.85s/it]Training Epoch 1/1: 23it [3:25:21, 498.37s/it]Training Epoch 1/1: 24it [3:33:23, 493.64s/it]Training Epoch 1/1: 25it [3:41:36, 493.32s/it]

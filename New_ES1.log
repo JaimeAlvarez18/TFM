@@ -1,0 +1,161 @@
+Getting data ...
+TRAINING DATA:
+['Midjourney' 'real' 'stable_diffusion_v_1_4' 'vqdm' 'wukong']
+(array([0, 1, 2, 3, 4]), array([161997, 157453, 161997, 162000, 162000]))
+Creating Dataloaders ...
+Creating model... retrain=False
+Training model...
+Training Epoch 1/1: 0it [00:00, ?it/s]Training Epoch 1/1: 1it [09:18, 558.52s/it]Training Epoch 1/1: 2it [19:35, 593.09s/it]Training Epoch 1/1: 3it [29:10, 584.60s/it]Training Epoch 1/1: 4it [37:41, 555.77s/it]Training Epoch 1/1: 5it [46:02, 535.76s/it]Training Epoch 1/1: 6it [55:30, 546.92s/it]Training Epoch 1/1: 7it [1:04:36, 546.41s/it]Training Epoch 1/1: 8it [1:13:43, 546.82s/it]Training Epoch 1/1: 9it [1:22:54, 548.17s/it]Training Epoch 1/1: 10it [1:31:49, 544.03s/it]Training Epoch 1/1: 11it [1:40:24, 535.06s/it]Training Epoch 1/1: 12it [1:49:09, 532.13s/it]Training Epoch 1/1: 13it [1:58:21, 537.96s/it]Training Epoch 1/1: 14it [2:07:06, 534.02s/it]Training Epoch 1/1: 15it [2:15:42, 528.78s/it]Training Epoch 1/1: 16it [2:24:26, 527.18s/it]Training Epoch 1/1: 17it [2:33:11, 526.69s/it]Training Epoch 1/1: 18it [2:42:05, 528.79s/it]Training Epoch 1/1: 19it [2:50:28, 521.18s/it]Training Epoch 1/1: 20it [2:58:53, 516.20s/it]Training Epoch 1/1: 21it [3:07:41, 519.80s/it]Training Epoch 1/1: 22it [3:16:38, 524.90s/it]Training Epoch 1/1: 23it [3:25:11, 521.21s/it]Training Epoch 1/1: 24it [3:33:55, 522.27s/it]Training Epoch 1/1: 25it [3:42:29, 519.65s/it]Training Epoch 1/1: 26it [3:51:19, 522.67s/it]Training Epoch 1/1: 27it [4:00:32, 531.94s/it]Training Epoch 1/1: 28it [4:09:07, 526.73s/it]Training Epoch 1/1: 29it [4:17:46, 524.37s/it]Training Epoch 1/1: 30it [4:26:43, 528.42s/it]Training Epoch 1/1: 31it [4:35:54, 535.18s/it]Training Epoch 1/1: 32it [4:44:27, 528.38s/it]Training Epoch 1/1: 33it [4:52:57, 522.88s/it]Training Epoch 1/1: 34it [5:01:33, 520.71s/it]Training Epoch 1/1: 35it [5:10:10, 519.68s/it]Training Epoch 1/1: 36it [5:18:35, 515.39s/it]Training Epoch 1/1: 37it [5:27:09, 514.80s/it]Training Epoch 1/1: 38it [5:35:40, 513.67s/it]Training Epoch 1/1: 39it [5:44:21, 516.01s/it]Training Epoch 1/1: 40it [5:53:08, 519.39s/it]Training Epoch 1/1: 41it [6:01:50, 520.03s/it]Training Epoch 1/1: 42it [6:10:48, 525.40s/it]Training Epoch 1/1: 43it [6:19:50, 530.34s/it]Training Epoch 1/1: 44it [6:28:50, 533.39s/it]Training Epoch 1/1: 45it [6:37:43, 533.09s/it]Training Epoch 1/1: 46it [6:46:29, 531.15s/it]Training Epoch 1/1: 47it [6:55:22, 531.66s/it]Training Epoch 1/1: 48it [7:04:35, 538.16s/it]Training Epoch 1/1: 49it [7:13:56, 544.74s/it]Training Epoch 1/1: 50it [7:22:45, 540.07s/it]Training Epoch 1/1: 51it [7:31:25, 534.06s/it]Training Epoch 1/1: 51it [7:31:25, 531.08s/it]
+--------------------------------------------------
+Starting new batch: 0
+Loss Batch 0: 11.857. Saved
+--------------------------------------------------
+Starting new batch: 1
+Loss Batch 1: 11.102. Saved
+--------------------------------------------------
+Starting new batch: 2
+Loss Batch 2: 10.369. Saved
+--------------------------------------------------
+Starting new batch: 3
+Loss Batch 3: 9.775. Saved
+--------------------------------------------------
+Starting new batch: 4
+Loss Batch 4: 9.354. Saved
+--------------------------------------------------
+Starting new batch: 5
+Loss Batch 5: 9.079. Saved
+--------------------------------------------------
+Starting new batch: 6
+Loss Batch 6: 8.892. Saved
+--------------------------------------------------
+Starting new batch: 7
+Loss Batch 7: 8.728. Saved
+--------------------------------------------------
+Starting new batch: 8
+Loss Batch 8: 8.636. Saved
+--------------------------------------------------
+Starting new batch: 9
+Loss Batch 9: 8.530. Saved
+--------------------------------------------------
+Starting new batch: 10
+Loss Batch 10: 8.442. Saved
+--------------------------------------------------
+Starting new batch: 11
+Loss Batch 11: 8.371. Saved
+--------------------------------------------------
+Starting new batch: 12
+Loss Batch 12: 8.306. Saved
+--------------------------------------------------
+Starting new batch: 13
+Loss Batch 13: 8.260. Saved
+--------------------------------------------------
+Starting new batch: 14
+Loss Batch 14: 8.199. Saved
+--------------------------------------------------
+Starting new batch: 15
+Loss Batch 15: 8.134. Saved
+--------------------------------------------------
+Starting new batch: 16
+Loss Batch 16: 8.092. Saved
+--------------------------------------------------
+Starting new batch: 17
+Loss Batch 17: 8.033. Saved
+--------------------------------------------------
+Starting new batch: 18
+Loss Batch 18: 8.003. Saved
+--------------------------------------------------
+Starting new batch: 19
+Loss Batch 19: 7.985. Saved
+--------------------------------------------------
+Starting new batch: 20
+Loss Batch 20: 7.932. Saved
+--------------------------------------------------
+Starting new batch: 21
+Loss Batch 21: 7.889. Saved
+--------------------------------------------------
+Starting new batch: 22
+Loss Batch 22: 7.871. Saved
+--------------------------------------------------
+Starting new batch: 23
+Loss Batch 23: 7.849. Saved
+--------------------------------------------------
+Starting new batch: 24
+Loss Batch 24: 7.811. Saved
+--------------------------------------------------
+Starting new batch: 25
+Loss Batch 25: 7.797. Saved
+--------------------------------------------------
+Starting new batch: 26
+Loss Batch 26: 7.772. Saved
+--------------------------------------------------
+Starting new batch: 27
+Loss Batch 27: 7.771. Saved
+--------------------------------------------------
+Starting new batch: 28
+Loss Batch 28: 7.742. Saved
+--------------------------------------------------
+Starting new batch: 29
+Loss Batch 29: 7.728. Saved
+--------------------------------------------------
+Starting new batch: 30
+Loss Batch 30: 7.713. Saved
+--------------------------------------------------
+Starting new batch: 31
+Loss Batch 31: 7.682. Saved
+--------------------------------------------------
+Starting new batch: 32
+Loss Batch 32: 7.662. Saved
+--------------------------------------------------
+Starting new batch: 33
+Loss Batch 33: 7.634. Saved
+--------------------------------------------------
+Starting new batch: 34
+Loss Batch 34: 7.634. Saved
+--------------------------------------------------
+Starting new batch: 35
+Loss Batch 35: 7.597. Saved
+--------------------------------------------------
+Starting new batch: 36
+Loss Batch 36: 7.595. Saved
+--------------------------------------------------
+Starting new batch: 37
+Loss Batch 37: 7.583. Saved
+--------------------------------------------------
+Starting new batch: 38
+Loss Batch 38: 7.554. Saved
+--------------------------------------------------
+Starting new batch: 39
+Loss Batch 39: 7.551. Saved
+--------------------------------------------------
+Starting new batch: 40
+Loss Batch 40: 7.557. Not Saved
+--------------------------------------------------
+Starting new batch: 41
+Loss Batch 41: 7.522. Saved
+--------------------------------------------------
+Starting new batch: 42
+Loss Batch 42: 7.518. Saved
+--------------------------------------------------
+Starting new batch: 43
+Loss Batch 43: 7.489. Saved
+--------------------------------------------------
+Starting new batch: 44
+Loss Batch 44: 7.457. Saved
+--------------------------------------------------
+Starting new batch: 45
+Loss Batch 45: 7.461. Not Saved
+--------------------------------------------------
+Starting new batch: 46
+Loss Batch 46: 7.448. Saved
+--------------------------------------------------
+Starting new batch: 47
+Loss Batch 47: 7.479. Not Saved
+--------------------------------------------------
+Starting new batch: 48
+Loss Batch 48: 7.441. Saved
+--------------------------------------------------
+Starting new batch: 49
+Loss Batch 49: 7.412. Saved
+--------------------------------------------------
+Starting new batch: 50
+Loss Batch 50: 7.417. Not Saved
