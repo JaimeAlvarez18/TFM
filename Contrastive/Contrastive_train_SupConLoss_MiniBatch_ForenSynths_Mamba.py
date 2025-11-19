@@ -7,7 +7,7 @@ import warnings
 warnings.filterwarnings("ignore")
 import gc
 from tqdm import tqdm
-device ='cuda:0' #if torch.cuda.is_available() else 'cpu'
+device ='cuda:1' #if torch.cuda.is_available() else 'cpu'
 
 # print(torch.cuda.mem_get_info(device=device))
 torch.cuda.set_device(0)  # Select GPU 0

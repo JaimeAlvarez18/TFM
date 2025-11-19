@@ -10,7 +10,7 @@ from utils.data_acquisition import data_set, images_Dataset, test_dataset, data_
 import torch
 from torch.utils.data import DataLoader
 print(torch.cuda.is_available())
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
 print(device)
 import gc
 from utils.data_acquisition import create_and_save_ALL_embeddings_Mamba
@@ -62,8 +62,15 @@ if __name__ == '__main__':
     # train_indices = [2, 4, 5, 7, 8]
 
 
-    test_indices = [0, 2, 6,8]  # vals = ["wukong","glide","ADM","stable_diffusion_v_1_5"] #New ES2
-    train_indices = [1, 3, 4,5, 7]        
+    # test_indices = [0, 2, 6,8]  # vals = ["wukong","glide","ADM","stable_diffusion_v_1_5"] #New ES2
+    # train_indices = [1, 3, 4,5, 7]    
+
+    # test_indices = [2,3, 6,8]  # vals = ["wukong","glide","stable_diffusion_v_1_5","Midjourney"] #New ES3        
+    # train_indices = [0,1, 4,5, 7]
+
+
+    test_indices = [2, 5,7,8]  # vals = ["wukong","stable_diffusion_v_1_4","Midjourney","vqdm"] #NEw ES5      
+    train_indices = [0,1, 3,4,6]   
         
 
 
@@ -81,18 +88,17 @@ if __name__ == '__main__':
     model.eval()
     ks = [150]
     for k in ks:
-
         data_selected = []
         y_selected = []
-        for i in range(n_generators):
-            indices = np.random.choice(np.argwhere(y_train == i).flatten(), size=k, replace=False)
-            data_selected.extend(np.array(train)[indices])
-            y_selected.extend(np.array(y_train)[indices])
+        
         for i in range(n_generators):
             if i not in test_indices:
+                # Regular generators: k samples
                 indices = np.random.choice(np.argwhere(y_train == i).flatten(), size=k, replace=False)
-            else:  # inserted
-                indices = np.random.choice(np.argwhere(y_train == i).flatten(), size=int(k * len(test_indices)), replace=False)
+            else:
+                # Test generators: more samples (k * number of test indices)
+                indices = np.random.choice(np.argwhere(y_train == i).flatten(), size=int(k / len(test_indices)), replace=False)
+            
             data_selected.extend(np.array(train)[indices])
             y_selected.extend(np.array(y_train)[indices])
         y_selected = [10 if i in test_indices else i for i in y_selected]
